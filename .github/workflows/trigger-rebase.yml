@@ -18,6 +18,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   call-rebase-workflow:
     # Call the reusable rebase workflow with YAML support

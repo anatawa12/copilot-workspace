@@ -24,6 +24,7 @@ To use this automated rebase workflow in your repository:
 3. **Customize as needed**:
    - Modify `trigger-rebase.yml` to match your triggering preferences
    - Update paths or branch names in the workflow if needed
+   - Ensure the trigger workflow includes `permissions: contents: write`
 
 Note: The main `rebase.yml` workflow is referenced remotely from this repository, so you don't need to copy it.
 
