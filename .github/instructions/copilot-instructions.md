@@ -1,3 +1,7 @@
+---
+applyTo: '**/*'
+---
+
 # GitHub Copilot Instructions for Automated Rebase
 
 This repository supports automated git rebase operations through GitHub Actions. You can help users create and manage rebase operations by generating the appropriate `.github/rebase-config.yml` files using the YAML format.

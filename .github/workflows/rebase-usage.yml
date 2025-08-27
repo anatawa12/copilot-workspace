@@ -1,7 +1,7 @@
-name: Example - Using Rebase Workflow (YAML Config)
+name: Using Rebase Workflow (YAML Config)
 
-# This is an example workflow showing how to use the reusable rebase workflow
-# with the new YAML configuration format
+# This workflow shows how to use the reusable rebase workflow
+# with the YAML configuration format
 # Copy this to your repository and modify as needed
 
 on:
@@ -20,8 +20,8 @@ on:
 
 jobs:
   call-rebase-workflow:
-    # Call the reusable rebase workflow (v2 with YAML support)
-    uses: ./.github/workflows/rebase-v2.yml
+    # Call the reusable rebase workflow with YAML support
+    uses: anatawa12/copilot-workspace/.github/workflows/rebase.yml@main
     with:
       branch: ${{ github.event.inputs.target_branch || '' }}
     secrets: inherit

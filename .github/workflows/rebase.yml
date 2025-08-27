@@ -214,14 +214,3 @@ jobs:
           
           echo "Force pushing to branch: $TARGET_BRANCH"
           git push --force-with-lease origin "$TARGET_BRANCH"
-      
-      - name: Clean up rebase config file
-        if: steps.check-file.outputs.exists == 'true'
-        shell: bash
-        run: |
-          echo "Removing rebase config file after successful rebase"
-          git rm .github/rebase-config.yml
-          git commit -m "Remove rebase config file after successful rebase"
-          
-          CURRENT_BRANCH=$(git branch --show-current)
-          git push origin "$CURRENT_BRANCH"
