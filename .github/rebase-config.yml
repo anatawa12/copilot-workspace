@@ -1,0 +1,11 @@
+# Rebase configuration to remove "Initial plan" commit
+# This configuration will keep only the self-introduction commit
+# and remove the initial plan commit from the branch history
+
+base_commit: "c8e913edf73c963df0752af0a727c0b6169eb3c4"
+
+operations:
+  # Skip the "Initial plan" commit by not including it
+  # Pick only the self-introduction commit
+  - action: "pick"
+    commit: "5aa721278b765b775754d085dbea0e15d30ff296"
