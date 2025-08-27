@@ -1,0 +1,18 @@
+# Example rebase-todo file
+# This is an example showing how to format the rebase-todo file
+# Copy this format and replace with your actual commit hashes
+
+# Base commit hash (the commit before the ones you want to modify)
+a1b2c3d4e5f6789012345678901234567890abcd
+
+# Pick the first commit as-is
+pick b2c3d4e5f6789012345678901234567890abcde
+
+# Squash the second commit with a new message
+squash c3d4e5f6789012345678901234567890abcdef Fix authentication and add comprehensive tests
+
+# Squash the third commit (short form) with another new message  
+s d4e5f6789012345678901234567890abcdef01 Refactor user service and update documentation
+
+# Pick another commit without changes
+pick e5f6789012345678901234567890abcdef0123
