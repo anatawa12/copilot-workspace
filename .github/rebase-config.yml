@@ -1,11 +1,19 @@
-# Rebase configuration to remove "Initial plan" commit
+# Rebase configuration to remove "Initial plan" commit and workflow fixes
 # This configuration will keep only the self-introduction commit
-# and remove the initial plan commit from the branch history
+# and remove the initial plan commit and subsequent workflow commits from branch history
 
 base_commit: "c8e913edf73c963df0752af0a727c0b6169eb3c4"
 
 operations:
-  # Skip the "Initial plan" commit by not including it
-  # Pick only the self-introduction commit
+  # Skip the "Initial plan" commit and workflow commits by not including them
+  # Pick only the self-introduction commit with a clean message
   - action: "pick"
     commit: "5aa721278b765b775754d085dbea0e15d30ff296"
+    message: |
+      Add self-introduction for GitHub Copilot
+      
+      This file describes my capabilities as an AI coding assistant,
+      including programming language support, development tasks I can help with,
+      and my philosophy of empowering developers.
+      
+      This demonstrates the automated rebase functionality.
