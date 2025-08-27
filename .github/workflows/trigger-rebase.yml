@@ -21,7 +21,7 @@ on:
 jobs:
   call-rebase-workflow:
     # Call the reusable rebase workflow with YAML support
-    uses: anatawa12/copilot-workspace/.github/workflows/rebase.yml@main
+    uses: ./.github/workflows/rebase.yml
     with:
       branch: ${{ github.event.inputs.target_branch || '' }}
     secrets: inherit
