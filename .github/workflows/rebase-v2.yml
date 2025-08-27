@@ -1,0 +1,227 @@
+name: Automated Rebase
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: 'Target branch to rebase (defaults to current branch)'
+        required: false
+        type: string
+        default: ''
+  push:
+    paths:
+      - '.github/rebase-config.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  rebase:
+    name: Perform Automated Rebase
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Check if rebase config exists
+        id: check-file
+        run: |
+          if [ -f ".github/rebase-config.yml" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Rebase config file found"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "No rebase config file found"
+          fi
+      
+      - name: Get rebase config file author
+        id: get-author
+        if: steps.check-file.outputs.exists == 'true'
+        run: |
+          # Get the author of the most recent commit that modified .github/rebase-config.yml
+          AUTHOR_NAME=$(git log -1 --pretty=format:'%an' -- .github/rebase-config.yml)
+          AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' -- .github/rebase-config.yml)
+          echo "name=${AUTHOR_NAME}" >> $GITHUB_OUTPUT
+          echo "email=${AUTHOR_EMAIL}" >> $GITHUB_OUTPUT
+          echo "Author: ${AUTHOR_NAME} <${AUTHOR_EMAIL}>"
+      
+      - name: Configure Git
+        if: steps.check-file.outputs.exists == 'true'
+        env:
+          AUTHOR_NAME: ${{ steps.get-author.outputs.name }}
+          AUTHOR_EMAIL: ${{ steps.get-author.outputs.email }}
+        run: |
+          git config user.name "$AUTHOR_NAME"
+          git config user.email "$AUTHOR_EMAIL"
+      
+      - name: Parse rebase config
+        id: parse-config
+        if: steps.check-file.outputs.exists == 'true'
+        shell: bash
+        run: |
+          echo "Parsing rebase config file..."
+          cat .github/rebase-config.yml
+          
+          # Use yq to parse YAML safely
+          if ! command -v yq &> /dev/null; then
+            echo "Installing yq..."
+            sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+            sudo chmod +x /usr/local/bin/yq
+          fi
+          
+          # Parse base commit
+          BASE_COMMIT=$(yq eval '.base_commit' .github/rebase-config.yml)
+          echo "base_commit=${BASE_COMMIT}" >> $GITHUB_OUTPUT
+          
+          # Parse operations and convert to JSON for shell processing
+          OPERATIONS=$(yq eval '.operations' -o=json .github/rebase-config.yml)
+          echo "operations<<EOF" >> $GITHUB_OUTPUT
+          echo "$OPERATIONS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "Base commit: $BASE_COMMIT"
+          echo "Operations: $OPERATIONS"
+      
+      - name: Perform rebase operations
+        if: steps.check-file.outputs.exists == 'true'
+        env:
+          BASE_COMMIT: ${{ steps.parse-config.outputs.base_commit }}
+          OPERATIONS: ${{ steps.parse-config.outputs.operations }}
+        shell: bash
+        run: |
+          echo "Starting rebase from commit: $BASE_COMMIT"
+          echo "Operations to perform: $OPERATIONS"
+          
+          # Validate base commit exists
+          if ! git rev-parse --verify "$BASE_COMMIT" >/dev/null 2>&1; then
+            echo "Error: Base commit $BASE_COMMIT does not exist"
+            exit 1
+          fi
+          
+          # Parse operations using jq for safe JSON handling
+          OPERATION_COUNT=$(echo "$OPERATIONS" | jq '. | length')
+          echo "Number of operations: $OPERATION_COUNT"
+          
+          if [ "$OPERATION_COUNT" -eq 0 ]; then
+            echo "No operations to perform"
+            exit 0
+          fi
+          
+          # Create backup branch
+          CURRENT_BRANCH=$(git branch --show-current)
+          BACKUP_BRANCH="backup-before-rebase-$(date +%s)"
+          git branch "$BACKUP_BRANCH" HEAD
+          echo "Created backup branch: $BACKUP_BRANCH"
+          
+          # Reset to base commit
+          git reset --hard "$BASE_COMMIT"
+          
+          # Process each operation
+          for ((i=0; i<OPERATION_COUNT; i++)); do
+            OPERATION=$(echo "$OPERATIONS" | jq -r ".[$i]")
+            ACTION=$(echo "$OPERATION" | jq -r '.action')
+            COMMIT_HASH=$(echo "$OPERATION" | jq -r '.commit')
+            MESSAGE=$(echo "$OPERATION" | jq -r '.message // empty')
+            
+            echo "Processing operation $((i+1))/$OPERATION_COUNT: $ACTION $COMMIT_HASH"
+            
+            # Validate commit exists
+            if ! git rev-parse --verify "$COMMIT_HASH" >/dev/null 2>&1; then
+              echo "Error: Commit $COMMIT_HASH does not exist"
+              echo "Restoring from backup branch $BACKUP_BRANCH"
+              git reset --hard "$BACKUP_BRANCH"
+              git branch -D "$BACKUP_BRANCH"
+              exit 1
+            fi
+            
+            case "$ACTION" in
+              "pick")
+                echo "Picking commit $COMMIT_HASH"
+                if ! git cherry-pick "$COMMIT_HASH"; then
+                  echo "Error: Failed to pick commit $COMMIT_HASH"
+                  git cherry-pick --abort 2>/dev/null || true
+                  git reset --hard "$BACKUP_BRANCH"
+                  git branch -D "$BACKUP_BRANCH"
+                  exit 1
+                fi
+                ;;
+              "squash")
+                echo "Squashing commit $COMMIT_HASH"
+                if ! git cherry-pick --no-commit "$COMMIT_HASH"; then
+                  echo "Error: Failed to squash commit $COMMIT_HASH"
+                  git cherry-pick --abort 2>/dev/null || true
+                  git reset --hard "$BACKUP_BRANCH"
+                  git branch -D "$BACKUP_BRANCH"
+                  exit 1
+                fi
+                
+                # If this is not the first operation, amend the previous commit
+                if [ $i -gt 0 ]; then
+                  # Get commit details for proper attribution
+                  ORIGINAL_AUTHOR_NAME=$(git log -1 --pretty=format:'%an' "$COMMIT_HASH")
+                  ORIGINAL_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' "$COMMIT_HASH")
+                  ORIGINAL_AUTHOR_DATE=$(git log -1 --pretty=format:'%ad' "$COMMIT_HASH")
+                  
+                  if [ -n "$MESSAGE" ]; then
+                    # Use custom message, supporting multi-line
+                    git commit --amend --author="$ORIGINAL_AUTHOR_NAME <$ORIGINAL_AUTHOR_EMAIL>" --date="$ORIGINAL_AUTHOR_DATE" -m "$MESSAGE"
+                  else
+                    # Use original commit message
+                    ORIGINAL_MESSAGE=$(git log -1 --pretty=format:'%B' "$COMMIT_HASH")
+                    git commit --amend --author="$ORIGINAL_AUTHOR_NAME <$ORIGINAL_AUTHOR_EMAIL>" --date="$ORIGINAL_AUTHOR_DATE" -m "$ORIGINAL_MESSAGE"
+                  fi
+                else
+                  # First operation, create new commit
+                  ORIGINAL_AUTHOR_NAME=$(git log -1 --pretty=format:'%an' "$COMMIT_HASH")
+                  ORIGINAL_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' "$COMMIT_HASH")
+                  ORIGINAL_AUTHOR_DATE=$(git log -1 --pretty=format:'%ad' "$COMMIT_HASH")
+                  
+                  if [ -n "$MESSAGE" ]; then
+                    git commit --author="$ORIGINAL_AUTHOR_NAME <$ORIGINAL_AUTHOR_EMAIL>" --date="$ORIGINAL_AUTHOR_DATE" -m "$MESSAGE"
+                  else
+                    ORIGINAL_MESSAGE=$(git log -1 --pretty=format:'%B' "$COMMIT_HASH")
+                    git commit --author="$ORIGINAL_AUTHOR_NAME <$ORIGINAL_AUTHOR_EMAIL>" --date="$ORIGINAL_AUTHOR_DATE" -m "$ORIGINAL_MESSAGE"
+                  fi
+                fi
+                ;;
+              *)
+                echo "Error: Unknown action '$ACTION'"
+                git reset --hard "$BACKUP_BRANCH"
+                git branch -D "$BACKUP_BRANCH"
+                exit 1
+                ;;
+            esac
+          done
+          
+          echo "All rebase operations completed successfully"
+          
+          # Clean up backup branch
+          git branch -D "$BACKUP_BRANCH"
+      
+      - name: Force push changes
+        if: steps.check-file.outputs.exists == 'true'
+        env:
+          TARGET_BRANCH: ${{ inputs.branch }}
+        shell: bash
+        run: |
+          if [ -z "$TARGET_BRANCH" ]; then
+            TARGET_BRANCH=$(git branch --show-current)
+          fi
+          
+          echo "Force pushing to branch: $TARGET_BRANCH"
+          git push --force-with-lease origin "$TARGET_BRANCH"
+      
+      - name: Clean up rebase config file
+        if: steps.check-file.outputs.exists == 'true'
+        shell: bash
+        run: |
+          echo "Removing rebase config file after successful rebase"
+          git rm .github/rebase-config.yml
+          git commit -m "Remove rebase config file after successful rebase"
+          
+          CURRENT_BRANCH=$(git branch --show-current)
+          git push origin "$CURRENT_BRANCH"

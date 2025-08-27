@@ -1,13 +1,14 @@
-name: Example - Using Rebase Workflow
+name: Example - Using Rebase Workflow (YAML Config)
 
 # This is an example workflow showing how to use the reusable rebase workflow
+# with the new YAML configuration format
 # Copy this to your repository and modify as needed
 
 on:
-  # Trigger when rebase-todo file is pushed
+  # Trigger when rebase config file is pushed
   push:
     paths:
-      - '.github/rebase-todo'
+      - '.github/rebase-config.yml'
   
   # Allow manual triggering for testing
   workflow_dispatch:
@@ -19,30 +20,8 @@ on:
 
 jobs:
   call-rebase-workflow:
-    # Call the reusable rebase workflow
-    uses: ./.github/workflows/rebase.yml
+    # Call the reusable rebase workflow (v2 with YAML support)
+    uses: ./.github/workflows/rebase-v2.yml
     with:
       branch: ${{ github.event.inputs.target_branch || '' }}
     secrets: inherit
-
-  # Optional: Add a notification job that runs after rebase
-  notify-completion:
-    name: Notify Rebase Completion
-    runs-on: ubuntu-latest
-    needs: call-rebase-workflow
-    if: always()
-    
-    steps:
-      - name: Notify Success
-        if: needs.call-rebase-workflow.result == 'success'
-        run: |
-          echo "✅ Rebase completed successfully!"
-          echo "The commits have been rebased and force-pushed."
-          echo "The rebase-todo file has been automatically removed."
-      
-      - name: Notify Failure
-        if: needs.call-rebase-workflow.result == 'failure'
-        run: |
-          echo "❌ Rebase failed!"
-          echo "Please check the workflow logs and fix any issues."
-          echo "The rebase-todo file remains in the repository."
