@@ -1,0 +1,8 @@
+# Rebase configuration to remove the "Initial plan" commit
+# This will keep only the self-introduction commit and remove the initial planning commit
+
+base_commit: "4f231263c57c9df2418093d2a7277a16474f0a18"
+operations:
+  # Pick the self-introduction commit (skip the Initial plan commit entirely)
+  - action: "pick"
+    commit: "57b60d759fbcdf07d7cda4cfcdbde6ddcbc6ba31"
