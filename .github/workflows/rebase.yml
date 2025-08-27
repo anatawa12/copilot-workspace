@@ -38,23 +38,15 @@ jobs:
             echo "No rebase config file found"
           fi
       
-      - name: Get rebase config file author
-        id: get-author
+      - name: Get author and configure Git
         if: steps.check-file.outputs.exists == 'true'
         run: |
           # Get the author of the most recent commit that modified .github/rebase-config.yml
           AUTHOR_NAME=$(git log -1 --pretty=format:'%an' -- .github/rebase-config.yml)
           AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' -- .github/rebase-config.yml)
-          echo "name=${AUTHOR_NAME}" >> $GITHUB_OUTPUT
-          echo "email=${AUTHOR_EMAIL}" >> $GITHUB_OUTPUT
           echo "Author: ${AUTHOR_NAME} <${AUTHOR_EMAIL}>"
-      
-      - name: Configure Git
-        if: steps.check-file.outputs.exists == 'true'
-        env:
-          AUTHOR_NAME: ${{ steps.get-author.outputs.name }}
-          AUTHOR_EMAIL: ${{ steps.get-author.outputs.email }}
-        run: |
+          
+          # Configure Git with the author information
           git config user.name "$AUTHOR_NAME"
           git config user.email "$AUTHOR_EMAIL"
       

@@ -1,4 +1,4 @@
-name: Using Rebase Workflow (YAML Config)
+name: Trigger Automated Rebase
 
 # This workflow shows how to use the reusable rebase workflow
 # with the YAML configuration format

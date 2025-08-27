@@ -11,6 +11,21 @@ This document describes the automated git rebase workflow that enables GitHub Co
 - **Automatic cleanup and proper attribution**: Maintains correct committer information and removes config files after completion
 - **Reusable Workflow**: Use `workflow_call` to integrate into your existing workflows
 
+## Installation
+
+To use this automated rebase workflow in your repository:
+
+1. **Copy the workflow files**:
+   - Copy `.github/workflows/rebase.yml` (the main reusable workflow)
+   - Copy `.github/workflows/trigger-rebase.yml` (example trigger workflow)
+
+2. **Copy the instruction file**:
+   - Copy `.github/instructions/automated-rebase.instructions.md` to enable GitHub Copilot integration
+
+3. **Customize as needed**:
+   - Modify `trigger-rebase.yml` to match your triggering preferences
+   - Update paths or branch names in the workflow if needed
+
 ## Configuration Format
 
 ### YAML Format
@@ -157,15 +172,6 @@ operations:
     message: "Add user profile management"
 ```
 
-### Benefits of YAML Format
-
-1. **Parser Reliability**: Uses well-tested YAML parsers instead of custom parsing
-2. **Multi-line Support**: Native support for complex, multi-line commit messages
-3. **Injection Safety**: YAML parsing prevents script injection attacks
-4. **Validation**: Built-in structure validation
-5. **Readability**: Clear, structured format that's easy to read and write
-6. **Tool Support**: IDE syntax highlighting and validation support
-
 ## Quick Start
 
 1. Copy the `rebase.yml` workflow to your repository's `.github/workflows/` directory
@@ -243,12 +249,9 @@ This workflow is designed to work seamlessly with GitHub Copilot. When you need 
 
 🔒 **Secure**: Uses the commit author of the config file as the committer for rebased commits.
 
-🆕 **Modern YAML format**: Provides reliable parsing, multi-line support, and injection safety.
-
 ## Files in This Repository
 
 - **[AUTOMATED_REBASE.md](AUTOMATED_REBASE.md)** - Complete documentation for the automated rebase workflow
-- **[REBASE_CONFIG_YAML.md](REBASE_CONFIG_YAML.md)** - YAML configuration format specification
-- **[copilot-instructions.md](copilot-instructions.md)** - GitHub Copilot integration guide
-- **`.github/workflows/rebase-v2.yml`** - Main reusable rebase workflow
-- **`.github/workflows/example-rebase-usage.yml`** - Example usage workflow
+- **[.github/instructions/automated-rebase.instructions.md](.github/instructions/automated-rebase.instructions.md)** - GitHub Copilot integration guide
+- **`.github/workflows/rebase.yml`** - Main reusable rebase workflow
+- **`.github/workflows/trigger-rebase.yml`** - Example trigger workflow
