@@ -17,6 +17,7 @@ Users might want to use automated rebase when they need to:
 
 **Important Notes:**
 - The `rebase-config.yml` commit should be the last commit without any other change since any commits after it will be removed during the rebase process
+- **GitHub Copilot Limitation**: When GitHub Copilot creates rebase configurations, the automated workflow will require manual approval before execution. This is because GitHub Copilot operates as a GitHub App, and GitHub's security model requires approval for workflows with write permissions triggered by GitHub Apps. Repository owners will need to manually approve the workflow run in the Actions tab.
 
 ## Rebase Configuration File Format
 
