@@ -15,8 +15,7 @@ This document describes the automated git rebase workflow that enables GitHub Co
 
 To use this automated rebase workflow in your repository:
 
-1. **Copy the workflow files**:
-   - Copy `.github/workflows/rebase.yml` (the main reusable workflow)
+1. **Copy the trigger workflow**:
    - Copy `.github/workflows/trigger-rebase.yml` (example trigger workflow)
 
 2. **Copy the instruction file**:
@@ -25,6 +24,8 @@ To use this automated rebase workflow in your repository:
 3. **Customize as needed**:
    - Modify `trigger-rebase.yml` to match your triggering preferences
    - Update paths or branch names in the workflow if needed
+
+Note: The main `rebase.yml` workflow is referenced remotely from this repository, so you don't need to copy it.
 
 ## Configuration Format
 

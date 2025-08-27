@@ -8,9 +8,6 @@ on:
         required: false
         type: string
         default: ''
-  push:
-    paths:
-      - '.github/rebase-config.yml'
 
 permissions:
   contents: write

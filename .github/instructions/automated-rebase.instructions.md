@@ -15,6 +15,10 @@ Users might want to use automated rebase when they need to:
 - Prepare commits for a pull request review
 - Drop initial plan commits or work-in-progress commits that are no longer needed
 
+**Important Notes:**
+- For normal operations, split your changes into separate commits: one for your actual changes, and one for the `rebase-config.yml` file
+- The `rebase-config.yml` commit should be the last commit since any commits after it will be removed during the rebase process
+
 ## Rebase Configuration File Format
 
 The `.github/rebase-config.yml` file uses YAML format for better reliability and multi-line message support:
