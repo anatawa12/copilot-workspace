@@ -1,6 +1,6 @@
 # Rebase Configuration Format (YAML)
 
-This document describes the YAML-based configuration format for the automated rebase workflow. This format replaces the previous custom text format to provide better parsing reliability and safety.
+This document describes the YAML-based configuration format for the automated rebase workflow. This format provides reliable parsing, multi-line message support, and injection safety.
 
 ## File Location
 
@@ -147,37 +147,6 @@ operations:
     commit: "345678901234567890abcdef1234567890"
     message: "Add user profile management"
 ```
-
-## Migration from Text Format
-
-If you have existing `.github/rebase-todo` files in the old text format:
-
-**Old format:**
-```
-a1b2c3d4e5f6789012345678901234567890abcd
-pick b2c3d4e5f6789012345678901234567890abcde
-squash c3d4e5f6789012345678901234567890abcdef Fix auth and add tests
-```
-
-**New YAML format:**
-```yaml
-base_commit: "a1b2c3d4e5f6789012345678901234567890abcd"
-operations:
-  - action: "pick"
-    commit: "b2c3d4e5f6789012345678901234567890abcde"
-  - action: "squash"
-    commit: "c3d4e5f6789012345678901234567890abcdef"
-    message: "Fix auth and add tests"
-```
-
-## Validation
-
-The workflow validates:
-- ✅ YAML syntax correctness
-- ✅ Required fields presence
-- ✅ Commit hash existence in repository
-- ✅ Base commit validity
-- ✅ Operation action values
 
 ## Benefits of YAML Format
 
