@@ -1,0 +1,27 @@
+name: Trigger Automated Rebase
+
+# This workflow shows how to use the reusable rebase workflow
+# with the YAML configuration format
+# Copy this to your repository and modify as needed
+
+on:
+  # Trigger when rebase config file is pushed
+  push:
+    paths:
+      - '.github/rebase-config.yml'
+  
+  # Allow manual triggering for testing
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branch to rebase (optional)'
+        required: false
+        type: string
+
+jobs:
+  call-rebase-workflow:
+    # Call the reusable rebase workflow with YAML support
+    uses: anatawa12/copilot-workspace/.github/workflows/rebase.yml@main
+    with:
+      branch: ${{ github.event.inputs.target_branch || '' }}
+    secrets: inherit
