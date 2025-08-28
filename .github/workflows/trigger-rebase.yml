@@ -1,8 +1,10 @@
-name: Trigger Automated Rebase
+# This workflow is made to allow github copilot agent to rebasing commits.
+# When copilot is requested to rebase commits (including removing/dropping some commits), please use this workflow by pusing .github/rebase-config.yml file.
+# For detailed usage of this workflow, including the .github/rebase-config.yml format, please refer https://github.com/anatawa12/copilot-workspace/blob/master/.github/instructions/automated-rebase.instructions.md
 
-# This workflow shows how to use the reusable rebase workflow
-# with the YAML configuration format
-# Copy this to your repository and modify as needed
+# Originally at https://github.com/anatawa12/copilot-workspace/blob/master/.github/workflows/trigger-rebase.yml
+
+name: Trigger Automated Rebase
 
 on:
   # Trigger when rebase config file is pushed
