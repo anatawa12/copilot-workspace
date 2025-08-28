@@ -13,6 +13,14 @@ on:
         description: 'Custom GitHub token for authentication (if not provided, uses GITHUB_TOKEN)'
         required: false
 
+  # Allow manual triggering for testing
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branch to rebase (optional)'
+        required: false
+        type: string
+
 permissions:
   contents: write
 
