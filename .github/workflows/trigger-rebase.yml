@@ -1,8 +1,13 @@
 # This workflow is made to allow github copilot agent to rebasing commits.
-# When copilot is requested to rebase commits (including removing/dropping some commits), please use this workflow by pusing .github/rebase-config.yml file.
+# When copilot is requested to rebase commits (including removing/dropping some commits), please use this workflow by pushing .github/rebase-config.yml file.
 # For detailed usage of this workflow, including the .github/rebase-config.yml format, please refer https://github.com/anatawa12/copilot-workspace/blob/master/.github/instructions/automated-rebase.instructions.md
 
 # Originally at https://github.com/anatawa12/copilot-workspace/blob/master/.github/workflows/trigger-rebase.yml
+
+# Token Configuration:
+# - By default, this workflow uses GITHUB_TOKEN, which has a limitation: pushes made with this token don't trigger other workflows
+# - To enable workflow triggering, add a repository secret named 'REBASE_TOKEN' containing a Personal Access Token with 'Contents: Write' permission
+# - The workflow automatically detects and uses REBASE_TOKEN when available, falling back to GITHUB_TOKEN when not set
 
 name: Trigger Automated Rebase
 
@@ -26,7 +31,10 @@ permissions:
 jobs:
   call-rebase-workflow:
     # Call the reusable rebase workflow with YAML support
+    # This workflow supports custom tokens for enhanced functionality:
+    # - Uses REBASE_TOKEN secret if available (enables triggering other workflows)
+    # - Falls back to GITHUB_TOKEN if REBASE_TOKEN is not set (default behavior)
     uses: anatawa12/copilot-workspace/.github/workflows/rebase.yml@master
     with:
       branch: ${{ github.event.inputs.target_branch || '' }}
-    secrets: inherit
+    secrets: inherit  # Required to pass both GITHUB_TOKEN and REBASE_TOKEN to the reusable workflow

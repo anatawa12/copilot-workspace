@@ -229,6 +229,51 @@ jobs:
     secrets: inherit
 ```
 
+## Using Custom GitHub Tokens
+
+### Default Token Limitations
+
+By default, the automated rebase workflow uses the standard `GITHUB_TOKEN` secret provided by GitHub Actions. However, this token has an important limitation: **pushes made with `GITHUB_TOKEN` do not trigger other GitHub Actions workflows** (such as `push`, `pull_request`, etc.). This is a security feature to prevent recursive workflow executions.
+
+### Using Personal Access Tokens (PATs)
+
+To enable triggering of subsequent workflows after a rebase operation, you can configure the workflow to use a Personal Access Token or GitHub App token instead.
+
+#### Setup Steps
+
+1. **Create a Personal Access Token**:
+   - Go to GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens
+   - Generate a new token with `Contents: Write` permission for your repository
+   - For classic tokens, use the `repo` scope
+
+2. **Add the token as a repository secret**:
+   - Go to your repository Settings → Secrets and variables → Actions
+   - Create a new secret named `REBASE_TOKEN`
+   - Paste your PAT as the value
+
+3. **The workflow automatically detects and uses the custom token**:
+   - No changes to your workflow files are needed
+   - The rebase workflow will use `REBASE_TOKEN` if available, otherwise falls back to `GITHUB_TOKEN`
+
+#### Token Priority
+
+The workflow uses tokens in this order:
+1. `REBASE_TOKEN` secret (if set) - **Recommended for triggering subsequent workflows**
+2. `GITHUB_TOKEN` secret (default) - **Limited, won't trigger other workflows**
+
+#### Workflow Configuration
+
+When using the reusable workflow, ensure `secrets: inherit` is included:
+
+```yaml
+jobs:
+  rebase:
+    uses: anatawa12/copilot-workspace/.github/workflows/rebase.yml@master
+    with:
+      branch: main
+    secrets: inherit  # Passes REBASE_TOKEN to the rebase workflow
+```
+
 ## For GitHub Copilot Integration
 
 This workflow is designed to work seamlessly with GitHub Copilot. When you need to squash commits:
