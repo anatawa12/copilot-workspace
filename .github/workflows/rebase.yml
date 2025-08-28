@@ -78,6 +78,12 @@ jobs:
           
           echo "Base commit: $BASE_COMMIT"
           echo "Operations: $OPERATIONS"
+          
+          # Remove the rebase config file now that we've parsed it
+          # This prevents it from being included in any rebased commits
+          echo "Removing rebase config file to prevent it from being included in rebased commits..."
+          rm .github/rebase-config.yml
+          echo "Rebase config file removed"
       
       - name: Perform rebase operations
         if: steps.check-file.outputs.exists == 'true'
@@ -88,6 +94,93 @@ jobs:
         run: |
           echo "Starting rebase from commit: $BASE_COMMIT"
           echo "Operations to perform: $OPERATIONS"
+          
+          # Function to perform cherry-pick with conflict resolution
+          cherry_pick_with_conflict_resolution() {
+            local commit_hash="$1"
+            local no_commit_flag="$2"
+            
+            local cherry_pick_cmd="git cherry-pick --allow-empty"
+            if [ "$no_commit_flag" = "true" ]; then
+              cherry_pick_cmd="$cherry_pick_cmd --no-commit"
+            fi
+            
+            if ! $cherry_pick_cmd "$commit_hash"; then
+              # Check if this is an empty commit error with --no-commit
+              if [ "$no_commit_flag" = "true" ] && git status --porcelain | wc -l | grep -q "^0$"; then
+                echo "Handling empty commit with --no-commit: nothing staged, which is expected for empty commits"
+                # For empty commits with --no-commit, Git fails but we can continue since nothing needs to be staged
+                git cherry-pick --skip 2>/dev/null || true
+                return 0
+              # Check if this is a delete-edit conflict for rebase config file
+              elif git status --porcelain | grep -q "^DU \.github/rebase-config\.yml$"; then
+                echo "Resolving delete-edit conflict for rebase config file (choosing deletion)"
+                git rm .github/rebase-config.yml 2>/dev/null || true
+                rm -f .github/rebase-config.yml
+                
+                if [ "$no_commit_flag" != "true" ]; then
+                  git cherry-pick --continue
+                fi
+                # For --no-commit, the changes are already staged (minus the config file we just removed)
+              else
+                echo "Error: Failed to cherry-pick commit $commit_hash (non-rebase-config conflict)"
+                git cherry-pick --abort 2>/dev/null || true
+                return 1
+              fi
+            fi
+            return 0
+          }
+          
+          # Function to remove rebase config file changes
+          remove_rebase_config_changes() {
+            local from_location="$1"  # "staging", "committed", or "both"
+            
+            case "$from_location" in
+              "staging")
+                if git diff --cached --name-only | grep -q "^\.github/rebase-config\.yml$"; then
+                  echo "Removing rebase config file changes from staging area"
+                  git reset HEAD .github/rebase-config.yml 2>/dev/null || true
+                  rm -f .github/rebase-config.yml
+                fi
+                ;;
+              "committed")
+                if git show --name-only HEAD | grep -q "^\.github/rebase-config\.yml$"; then
+                  echo "Removing rebase config file changes from committed changes"
+                  git rm --cached .github/rebase-config.yml 2>/dev/null || true
+                  rm -f .github/rebase-config.yml
+                  git commit --amend --no-edit --allow-empty
+                fi
+                ;;
+              "both")
+                remove_rebase_config_changes "staging"
+                remove_rebase_config_changes "committed"
+                ;;
+            esac
+          }
+          
+          # Function to commit with original metadata
+          commit_with_original_metadata() {
+            local commit_hash="$1"
+            local custom_message="$2"
+            local is_amend="$3"
+            
+            # Get commit details for proper attribution
+            local original_author_name=$(git log -1 --pretty=format:'%an' "$commit_hash")
+            local original_author_email=$(git log -1 --pretty=format:'%ae' "$commit_hash")
+            local original_author_date=$(git log -1 --pretty=format:'%ad' "$commit_hash")
+            
+            local commit_cmd="git commit --allow-empty"
+            if [ "$is_amend" = "true" ]; then
+              commit_cmd="$commit_cmd --amend"
+            fi
+            
+            if [ -n "$custom_message" ]; then
+              $commit_cmd --author="$original_author_name <$original_author_email>" --date="$original_author_date" -m "$custom_message"
+            else
+              local original_message=$(git log -1 --pretty=format:'%B' "$commit_hash")
+              $commit_cmd --author="$original_author_name <$original_author_email>" --date="$original_author_date" -m "$original_message"
+            fi
+          }
           
           # Validate base commit exists
           if ! git rev-parse --verify "$BASE_COMMIT" >/dev/null 2>&1; then
@@ -134,51 +227,37 @@ jobs:
             case "$ACTION" in
               "pick")
                 echo "Picking commit $COMMIT_HASH"
-                if ! git cherry-pick "$COMMIT_HASH"; then
-                  echo "Error: Failed to pick commit $COMMIT_HASH"
-                  git cherry-pick --abort 2>/dev/null || true
-                  git reset --hard "$BACKUP_BRANCH"
-                  git branch -D "$BACKUP_BRANCH"
-                  exit 1
-                fi
-                ;;
-              "squash")
-                echo "Squashing commit $COMMIT_HASH"
-                if ! git cherry-pick --no-commit "$COMMIT_HASH"; then
-                  echo "Error: Failed to squash commit $COMMIT_HASH"
-                  git cherry-pick --abort 2>/dev/null || true
+                # Cherry-pick without commit first
+                if ! cherry_pick_with_conflict_resolution "$COMMIT_HASH" "true"; then
                   git reset --hard "$BACKUP_BRANCH"
                   git branch -D "$BACKUP_BRANCH"
                   exit 1
                 fi
                 
+                # Remove rebase config changes from staging
+                remove_rebase_config_changes "staging"
+                
+                # Commit with original commit message, author, and time
+                commit_with_original_metadata "$COMMIT_HASH" "" "false"
+                ;;
+              "squash")
+                echo "Squashing commit $COMMIT_HASH"
+                # Cherry-pick without commit
+                if ! cherry_pick_with_conflict_resolution "$COMMIT_HASH" "true"; then
+                  git reset --hard "$BACKUP_BRANCH"
+                  git branch -D "$BACKUP_BRANCH"
+                  exit 1
+                fi
+                
+                # Remove rebase config changes from staging
+                remove_rebase_config_changes "staging"
+                
                 # If this is not the first operation, amend the previous commit
                 if [ $i -gt 0 ]; then
-                  # Get commit details for proper attribution
-                  ORIGINAL_AUTHOR_NAME=$(git log -1 --pretty=format:'%an' "$COMMIT_HASH")
-                  ORIGINAL_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' "$COMMIT_HASH")
-                  ORIGINAL_AUTHOR_DATE=$(git log -1 --pretty=format:'%ad' "$COMMIT_HASH")
-                  
-                  if [ -n "$MESSAGE" ]; then
-                    # Use custom message, supporting multi-line
-                    git commit --amend --author="$ORIGINAL_AUTHOR_NAME <$ORIGINAL_AUTHOR_EMAIL>" --date="$ORIGINAL_AUTHOR_DATE" -m "$MESSAGE"
-                  else
-                    # Use original commit message
-                    ORIGINAL_MESSAGE=$(git log -1 --pretty=format:'%B' "$COMMIT_HASH")
-                    git commit --amend --author="$ORIGINAL_AUTHOR_NAME <$ORIGINAL_AUTHOR_EMAIL>" --date="$ORIGINAL_AUTHOR_DATE" -m "$ORIGINAL_MESSAGE"
-                  fi
+                  commit_with_original_metadata "$COMMIT_HASH" "$MESSAGE" "true"
                 else
                   # First operation, create new commit
-                  ORIGINAL_AUTHOR_NAME=$(git log -1 --pretty=format:'%an' "$COMMIT_HASH")
-                  ORIGINAL_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' "$COMMIT_HASH")
-                  ORIGINAL_AUTHOR_DATE=$(git log -1 --pretty=format:'%ad' "$COMMIT_HASH")
-                  
-                  if [ -n "$MESSAGE" ]; then
-                    git commit --author="$ORIGINAL_AUTHOR_NAME <$ORIGINAL_AUTHOR_EMAIL>" --date="$ORIGINAL_AUTHOR_DATE" -m "$MESSAGE"
-                  else
-                    ORIGINAL_MESSAGE=$(git log -1 --pretty=format:'%B' "$COMMIT_HASH")
-                    git commit --author="$ORIGINAL_AUTHOR_NAME <$ORIGINAL_AUTHOR_EMAIL>" --date="$ORIGINAL_AUTHOR_DATE" -m "$ORIGINAL_MESSAGE"
-                  fi
+                  commit_with_original_metadata "$COMMIT_HASH" "$MESSAGE" "false"
                 fi
                 ;;
               *)
