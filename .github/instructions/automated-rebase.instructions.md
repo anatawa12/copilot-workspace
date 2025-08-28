@@ -232,3 +232,47 @@ After you commit and push this file, the GitHub Actions workflow will automatica
 
 Make sure you're on a branch where force pushing is acceptable!
 ```
+
+## Using Custom GitHub Tokens
+
+By default, the automated rebase workflow uses the standard `GITHUB_TOKEN` secret. However, pushes made with this token have limitations - they won't trigger several GitHub Actions events like `push`, `pull_request`, etc.
+
+To enable event triggering for subsequent workflows, you can use a custom token like a Personal Access Token (PAT) or GitHub App token.
+
+### Setting Up a Custom Token
+
+1. **Create a Personal Access Token**:
+   - Go to GitHub Settings → Developer settings → Personal access tokens
+   - Generate a new token with `contents:write` permission
+   - For fine-grained tokens, ensure `Contents` permission is set to `Write`
+
+2. **Add the token as a repository secret**:
+   - Go to your repository Settings → Secrets and variables → Actions
+   - Add a new secret named `REBASE_TOKEN` (or any name you prefer)
+   - Paste your PAT as the value
+
+3. **The workflow will automatically use the custom token**:
+   - The rebase workflow checks for `REBASE_TOKEN` secret first
+   - If not found, it falls back to the default `GITHUB_TOKEN`
+   - No additional configuration is needed in your workflow files
+
+### Custom Token Workflow Setup
+
+If you're using the workflow in your own repository, ensure your trigger workflow includes `secrets: inherit`:
+
+```yaml
+jobs:
+  call-rebase-workflow:
+    uses: anatawa12/copilot-workspace/.github/workflows/rebase.yml@master
+    with:
+      branch: ${{ github.event.inputs.target_branch || '' }}
+    secrets: inherit  # This ensures REBASE_TOKEN is passed to the rebase workflow
+```
+
+### Token Priority
+
+The workflow uses tokens in this priority order:
+1. `REBASE_TOKEN` secret (if set)
+2. `GITHUB_TOKEN` secret (default)
+
+This ensures backward compatibility while enabling custom token usage when needed.
