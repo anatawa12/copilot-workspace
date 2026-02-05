@@ -1499,20 +1499,20 @@
                 }
                 
                 // Try to merge siblings with same name
-                // Don't merge if intermediate has a type (value part after colon)
+                // Don't merge if root node has a type (value part after colon)
                 const merged = new Set();
                 for (let i = 0; i < intermediates.length; i++) {
                     if (merged.has(i)) continue;
                     
                     const intermediate = intermediates[i];
                     
-                    // Don't merge if intermediate has a type value (after colon)
-                    if (intermediate.type) continue;
-                    
                     // Find root node with same name
                     const matchingRoot = roots.find(r => r.name === intermediate.name);
                     
                     if (matchingRoot) {
+                        // Don't merge if root node has a type value (after colon)
+                        if (matchingRoot.type) continue;
+                        
                         // Merge intermediate into root
                         // Add intermediate's path children to root's path children
                         if (intermediate.pathChildren.length > 0) {
