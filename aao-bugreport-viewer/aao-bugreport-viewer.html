@@ -771,17 +771,6 @@
             }
         }
 
-        function displayViewer() {
-            inputContainer.classList.add('hidden');
-            viewerContainer.classList.add('visible');
-            
-            // Display file list
-            displayFileList();
-            
-            // Reset content view - show global headers
-            currentFileIndex = -1;
-            showGlobalHeadersView();
-        }
 
         function displayFileList() {
             fileList.innerHTML = '';
@@ -797,7 +786,7 @@
             });
         }
 
-        function selectFile(index) {
+        function selectFile(index, updateHistory = true) {
             currentFileIndex = index;
             const file = parsedData.files[index];
             
@@ -828,6 +817,14 @@
                 // Display regular content
                 contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
             }
+            
+            // Update browser history if requested
+            if (updateHistory && window.navigation) {
+                window.navigation.navigate('#file-' + index, { history: 'push' });
+            } else if (updateHistory) {
+                // Fallback for browsers without Navigation API
+                history.pushState({ fileIndex: index }, '', '#file-' + index);
+            }
         }
 
         function displayFileHeaders(headers) {
@@ -840,12 +837,18 @@
             });
         }
 
-        function showGlobalHeadersView() {
+        function showGlobalHeadersView(updateHistory = true) {
             contentFilename.textContent = 'Global Headers';
             fileHeadersToggle.style.display = 'none';
             fileHeaders.classList.remove('visible');
             document.getElementById('tree-view-controls').style.display = 'none';
             document.getElementById('show-global-headers-btn').classList.add('active');
+            
+            // Update active state in file list
+            const items = fileList.querySelectorAll('.file-item');
+            items.forEach((item) => {
+                item.classList.remove('active');
+            });
             
             contentViewer.innerHTML = `
                 <div id="global-headers-view">
@@ -861,6 +864,14 @@
                 div.innerHTML = `<span class="header-key">${escapeHtml(header.key)}:</span> ${escapeHtml(header.value)}`;
                 globalHeadersContainer.appendChild(div);
             });
+            
+            // Update browser history if requested
+            if (updateHistory && window.navigation) {
+                window.navigation.navigate('#global-headers', { history: 'push' });
+            } else if (updateHistory) {
+                // Fallback for browsers without Navigation API
+                history.pushState({ showGlobal: true }, '', '#global-headers');
+            }
         }
 
         function showError(message) {
@@ -1638,18 +1649,16 @@
         });
 
         backButton.addEventListener('click', () => {
-            viewerContainer.classList.remove('visible');
-            inputContainer.classList.remove('hidden');
-            parsedData = null;
-            currentFileIndex = -1;
+            // Navigate back using browser history
+            if (window.navigation) {
+                window.navigation.back();
+            } else {
+                history.back();
+            }
         });
 
         document.getElementById('show-global-headers-btn').addEventListener('click', () => {
             showGlobalHeadersView();
-            // Update active state
-            const items = fileList.querySelectorAll('.file-item');
-            items.forEach(item => item.classList.remove('active'));
-            document.getElementById('show-global-headers-btn').classList.add('active');
             currentFileIndex = -1;
         });
 
@@ -1657,6 +1666,68 @@
             const isVisible = fileHeaders.classList.toggle('visible');
             fileHeadersToggle.textContent = isVisible ? 'Hide File Headers' : 'Show File Headers';
         });
+
+        // Handle browser back/forward navigation
+        function handleNavigation() {
+            const hash = window.location.hash;
+            
+            if (!hash || hash === '') {
+                // No hash - show input screen
+                viewerContainer.classList.remove('visible');
+                inputContainer.classList.remove('hidden');
+                parsedData = null;
+                currentFileIndex = -1;
+            } else if (hash === '#global-headers') {
+                // Show global headers without updating history
+                if (parsedData) {
+                    showGlobalHeadersView(false);
+                    currentFileIndex = -1;
+                }
+            } else if (hash.startsWith('#file-')) {
+                // Show specific file without updating history
+                const fileIndex = parseInt(hash.substring(6));
+                if (parsedData && fileIndex >= 0 && fileIndex < parsedData.files.length) {
+                    selectFile(fileIndex, false);
+                }
+            }
+        }
+
+        // Listen to navigation events (Navigation API)
+        if (window.navigation) {
+            window.navigation.addEventListener('navigate', (event) => {
+                // Let the browser handle the navigation, then update our UI
+                event.intercept({
+                    handler: async () => {
+                        handleNavigation();
+                    }
+                });
+            });
+        } else {
+            // Fallback for browsers without Navigation API
+            window.addEventListener('popstate', (event) => {
+                handleNavigation();
+            });
+        }
+
+        // Set initial history state when viewer is displayed
+        function displayViewer() {
+            inputContainer.classList.add('hidden');
+            viewerContainer.classList.add('visible');
+            
+            // Display file list
+            displayFileList();
+            
+            // Reset content view - show global headers
+            currentFileIndex = -1;
+            
+            // Set initial URL hash and show global headers
+            if (window.navigation) {
+                window.navigation.navigate('#global-headers', { history: 'replace' });
+            } else {
+                history.replaceState({ showGlobal: true }, '', '#global-headers');
+            }
+            showGlobalHeadersView(false);
+        }
     </script>
 </body>
 </html>
