@@ -376,15 +376,24 @@
             line-height: 1.6;
         }
 
-        .tree-node-header {
+        .tree-node details {
+            margin-left: 20px;
+        }
+
+        .tree-node summary {
             cursor: pointer;
             padding: 2px 0;
             user-select: none;
+            list-style: none;
             display: flex;
             align-items: center;
         }
 
-        .tree-node-header:hover {
+        .tree-node summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .tree-node summary:hover {
             background: #f8f9fa;
         }
 
@@ -409,14 +418,6 @@
         .tree-node-type {
             color: #999;
             margin-left: 5px;
-        }
-
-        .tree-node-children {
-            margin-left: 20px;
-        }
-
-        .tree-node-children.collapsed {
-            display: none;
         }
 
         .tree-view-container {
@@ -874,47 +875,68 @@
             container.innerHTML = '';
             
             function renderSimpleNode(node, container) {
-                const nodeDiv = document.createElement('div');
-                nodeDiv.className = 'tree-node';
-                
                 const hasChildren = node.children && node.children.length > 0;
                 
-                const headerDiv = document.createElement('div');
-                headerDiv.className = 'tree-node-header';
-                
-                const toggle = document.createElement('span');
-                toggle.className = 'tree-node-toggle';
-                toggle.textContent = hasChildren ? '▶' : ' ';
-                
-                const content = document.createElement('span');
-                content.className = 'tree-node-content';
-                content.innerHTML = `<span class="tree-node-path">${escapeHtml(node.path)}</span>`;
-                if (node.type) {
-                    content.innerHTML += `<span class="tree-node-type">(${escapeHtml(node.type)})</span>`;
-                }
-                
-                headerDiv.appendChild(toggle);
-                headerDiv.appendChild(content);
-                nodeDiv.appendChild(headerDiv);
-                
                 if (hasChildren) {
-                    const childrenDiv = document.createElement('div');
-                    childrenDiv.className = 'tree-node-children collapsed';
+                    // Use details/summary for nodes with children
+                    const details = document.createElement('details');
+                    const summary = document.createElement('summary');
+                    
+                    const toggle = document.createElement('span');
+                    toggle.className = 'tree-node-toggle';
+                    toggle.textContent = '▶';
+                    
+                    const content = document.createElement('span');
+                    content.className = 'tree-node-content';
+                    content.innerHTML = `<span class="tree-node-path">${escapeHtml(node.path)}</span>`;
+                    if (node.type) {
+                        content.innerHTML += `<span class="tree-node-type">(${escapeHtml(node.type)})</span>`;
+                    }
+                    
+                    summary.appendChild(toggle);
+                    summary.appendChild(content);
+                    details.appendChild(summary);
+                    
+                    // Update toggle icon on state change
+                    details.addEventListener('toggle', () => {
+                        toggle.textContent = details.open ? '▼' : '▶';
+                    });
+                    
+                    const nodeDiv = document.createElement('div');
+                    nodeDiv.className = 'tree-node';
                     
                     node.children.forEach(child => {
-                        renderSimpleNode(child, childrenDiv);
+                        renderSimpleNode(child, nodeDiv);
                     });
                     
-                    nodeDiv.appendChild(childrenDiv);
+                    details.appendChild(nodeDiv);
+                    container.appendChild(details);
+                } else {
+                    // Leaf nodes without details/summary
+                    const nodeDiv = document.createElement('div');
+                    nodeDiv.className = 'tree-node';
                     
-                    // Toggle functionality
-                    headerDiv.addEventListener('click', () => {
-                        childrenDiv.classList.toggle('collapsed');
-                        toggle.textContent = childrenDiv.classList.contains('collapsed') ? '▶' : '▼';
-                    });
+                    const leafDiv = document.createElement('div');
+                    leafDiv.style.padding = '2px 0';
+                    leafDiv.style.display = 'flex';
+                    leafDiv.style.alignItems = 'center';
+                    
+                    const toggle = document.createElement('span');
+                    toggle.className = 'tree-node-toggle';
+                    toggle.textContent = ' ';
+                    
+                    const content = document.createElement('span');
+                    content.className = 'tree-node-content';
+                    content.innerHTML = `<span class="tree-node-path">${escapeHtml(node.path)}</span>`;
+                    if (node.type) {
+                        content.innerHTML += `<span class="tree-node-type">(${escapeHtml(node.type)})</span>`;
+                    }
+                    
+                    leafDiv.appendChild(toggle);
+                    leafDiv.appendChild(content);
+                    nodeDiv.appendChild(leafDiv);
+                    container.appendChild(nodeDiv);
                 }
-                
-                container.appendChild(nodeDiv);
             }
             
             nodes.forEach(node => renderSimpleNode(node, container));
