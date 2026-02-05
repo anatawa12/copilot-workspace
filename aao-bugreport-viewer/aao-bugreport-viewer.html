@@ -1285,49 +1285,159 @@
             container.innerHTML = '';
             container.className = 'tree-view-container';
             
-            function renderTreeNode(node, container, prefix = '', isLast = true, isRoot = false) {
-                const nodeDiv = document.createElement('div');
-                nodeDiv.className = 'tree-view-node';
+            // Build hierarchy from root node paths
+            const rootHierarchy = buildRootHierarchy(nodes);
+            
+            function renderHierarchyNode(hierNode, parentElement) {
+                const hasChildren = (hierNode.pathChildren && hierNode.pathChildren.length > 0) || 
+                                  (hierNode.treeChildren && hierNode.treeChildren.length > 0);
                 
-                // Extract just the leaf name from the path
-                let displayName = node.path;
+                if (hasChildren) {
+                    // Use details/summary for collapsible hierarchy
+                    const details = document.createElement('details');
+                    const summary = document.createElement('summary');
+                    
+                    const content = document.createElement('span');
+                    content.className = 'tree-node-content';
+                    content.innerHTML = `<span class="tree-node-path">${escapeHtml(hierNode.name)}</span>`;
+                    if (hierNode.type) {
+                        content.innerHTML += `<span class="tree-node-type">(${escapeHtml(hierNode.type)})</span>`;
+                    }
+                    
+                    summary.appendChild(content);
+                    details.appendChild(summary);
+                    
+                    const childContainer = document.createElement('div');
+                    childContainer.className = 'tree-node';
+                    
+                    // Render path hierarchy children first
+                    if (hierNode.pathChildren && hierNode.pathChildren.length > 0) {
+                        hierNode.pathChildren.forEach(child => {
+                            renderHierarchyNode(child, childContainer);
+                        });
+                    }
+                    
+                    // Then render tree structure children
+                    if (hierNode.treeChildren && hierNode.treeChildren.length > 0) {
+                        hierNode.treeChildren.forEach(child => {
+                            renderTreeNode(child, childContainer);
+                        });
+                    }
+                    
+                    details.appendChild(childContainer);
+                    parentElement.appendChild(details);
+                } else {
+                    // Leaf node without children
+                    const leafDiv = document.createElement('div');
+                    leafDiv.style.padding = '2px 0';
+                    leafDiv.style.paddingLeft = '20px';
+                    
+                    const content = document.createElement('span');
+                    content.className = 'tree-node-content';
+                    content.innerHTML = `<span class="tree-node-path">${escapeHtml(hierNode.name)}</span>`;
+                    if (hierNode.type) {
+                        content.innerHTML += `<span class="tree-node-type">(${escapeHtml(hierNode.type)})</span>`;
+                    }
+                    
+                    leafDiv.appendChild(content);
+                    parentElement.appendChild(leafDiv);
+                }
+            }
+            
+            function renderTreeNode(node, parentElement) {
+                const hasChildren = node.children && node.children.length > 0;
+                
+                if (hasChildren) {
+                    const details = document.createElement('details');
+                    const summary = document.createElement('summary');
+                    
+                    const content = document.createElement('span');
+                    content.className = 'tree-node-content';
+                    content.innerHTML = `<span class="tree-node-path">${escapeHtml(node.path)}</span>`;
+                    if (node.type) {
+                        content.innerHTML += `<span class="tree-node-type">(${escapeHtml(node.type)})</span>`;
+                    }
+                    
+                    summary.appendChild(content);
+                    details.appendChild(summary);
+                    
+                    const childContainer = document.createElement('div');
+                    childContainer.className = 'tree-node';
+                    
+                    node.children.forEach(child => {
+                        renderTreeNode(child, childContainer);
+                    });
+                    
+                    details.appendChild(childContainer);
+                    parentElement.appendChild(details);
+                } else {
+                    // Leaf node
+                    const leafDiv = document.createElement('div');
+                    leafDiv.style.padding = '2px 0';
+                    leafDiv.style.paddingLeft = '20px';
+                    
+                    const content = document.createElement('span');
+                    content.className = 'tree-node-content';
+                    content.innerHTML = `<span class="tree-node-path">${escapeHtml(node.path)}</span>`;
+                    if (node.type) {
+                        content.innerHTML += `<span class="tree-node-type">(${escapeHtml(node.type)})</span>`;
+                    }
+                    
+                    leafDiv.appendChild(content);
+                    parentElement.appendChild(leafDiv);
+                }
+            }
+            
+            // Render root hierarchy
+            rootHierarchy.forEach(hierNode => {
+                renderHierarchyNode(hierNode, container);
+            });
+        }
+        
+        function buildRootHierarchy(nodes) {
+            const roots = [];
+            
+            for (const node of nodes) {
+                // Check if this node has a path with slashes (hierarchy)
                 if (node.path.includes('/')) {
                     const parts = node.path.split('/');
-                    displayName = parts[parts.length - 1];
-                }
-                
-                // Build the line with tree graphics
-                const linePrefix = isRoot ? '' : prefix;
-                const connector = isRoot ? '' : (isLast ? '└─ ' : '├─ ');
-                
-                const lines = document.createElement('span');
-                lines.className = 'tree-view-lines';
-                lines.textContent = linePrefix + connector;
-                
-                const content = document.createElement('span');
-                content.className = 'tree-view-content';
-                content.innerHTML = `<span class="tree-view-name">${escapeHtml(displayName)}</span>`;
-                if (node.type) {
-                    content.innerHTML += ` <span class="tree-view-type">${escapeHtml(node.type)}</span>`;
-                }
-                
-                nodeDiv.appendChild(lines);
-                nodeDiv.appendChild(content);
-                container.appendChild(nodeDiv);
-                
-                // Render children
-                if (node.children && node.children.length > 0) {
-                    node.children.forEach((child, index) => {
-                        const isChildLast = index === node.children.length - 1;
-                        const childPrefix = isRoot ? '' : (prefix + (isLast ? '    ' : '│   '));
-                        renderTreeNode(child, container, childPrefix, isChildLast, false);
+                    
+                    // Build hierarchy from path
+                    let current = roots;
+                    for (let i = 0; i < parts.length; i++) {
+                        const part = parts[i];
+                        let existing = current.find(n => n.name === part && !n.isLeaf);
+                        
+                        if (!existing) {
+                            existing = {
+                                name: part,
+                                type: i === parts.length - 1 ? node.type : null,
+                                pathChildren: [],
+                                treeChildren: i === parts.length - 1 ? node.children : [],
+                                isLeaf: i === parts.length - 1
+                            };
+                            current.push(existing);
+                        } else if (i === parts.length - 1) {
+                            // Last part - add tree children
+                            existing.type = node.type;
+                            existing.treeChildren = node.children;
+                        }
+                        
+                        current = existing.pathChildren;
+                    }
+                } else {
+                    // No hierarchy in path, add directly
+                    roots.push({
+                        name: node.path,
+                        type: node.type,
+                        pathChildren: [],
+                        treeChildren: node.children,
+                        isLeaf: true
                     });
                 }
             }
             
-            nodes.forEach((node, index) => {
-                renderTreeNode(node, container, '', index === nodes.length - 1, true);
-            });
+            return roots;
         }
 
         // Function for view switching
