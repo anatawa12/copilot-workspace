@@ -261,12 +261,20 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 15px;
         }
 
         #content-filename {
             font-weight: 500;
             font-size: 16px;
             color: #333;
+            flex: 1;
+        }
+
+        #header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         #file-headers-toggle {
@@ -345,15 +353,14 @@
         /* Tree view styles */
         .view-mode-selector {
             display: inline-flex;
-            gap: 5px;
-            margin-left: 10px;
+            gap: 3px;
         }
 
         .view-mode-btn {
             background: #e9ecef;
             color: #333;
             border: none;
-            padding: 4px 10px;
+            padding: 6px 12px;
             border-radius: 4px;
             font-size: 12px;
             cursor: pointer;
@@ -367,6 +374,26 @@
         .view-mode-btn.active {
             background: #667eea;
             color: white;
+        }
+
+        .expand-all-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .expand-all-btn:hover {
+            background: #5568d3;
+        }
+
+        .tree-search-highlight {
+            background-color: yellow;
+            font-weight: bold;
         }
 
         .tree-node {
@@ -384,25 +411,12 @@
             cursor: pointer;
             padding: 2px 0;
             user-select: none;
-            list-style: none;
             display: flex;
             align-items: center;
         }
 
-        .tree-node summary::-webkit-details-marker {
-            display: none;
-        }
-
         .tree-node summary:hover {
             background: #f8f9fa;
-        }
-
-        .tree-node-toggle {
-            display: inline-block;
-            width: 16px;
-            text-align: center;
-            color: #999;
-            font-size: 10px;
         }
 
         .tree-node-content {
@@ -493,7 +507,18 @@
             <div id="content-panel">
                 <div id="content-header">
                     <span id="content-filename">Select a file to view</span>
-                    <button id="file-headers-toggle" style="display: none;">Show File Headers</button>
+                    <div id="header-controls">
+                        <div id="tree-view-controls" style="display: none;">
+                            <input type="text" id="tree-search-input" placeholder="Find and expand..." style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; width: 200px;">
+                            <button id="tree-search-btn" class="expand-all-btn">Search</button>
+                            <button id="tree-clear-btn" class="expand-all-btn" style="display: none;">Clear</button>
+                            <div class="view-mode-selector">
+                                <button class="view-mode-btn active" data-mode="simple">Simple</button>
+                                <button class="view-mode-btn" data-mode="tree">Tree</button>
+                            </div>
+                        </div>
+                        <button id="file-headers-toggle" style="display: none;">Show File Headers</button>
+                    </div>
                 </div>
                 <div id="file-headers"></div>
                 <div id="content-viewer">
@@ -733,6 +758,8 @@
             if (file.filename.endsWith('.tree.txt')) {
                 displayTreeFile(file);
             } else {
+                // Hide tree view controls for non-tree files
+                document.getElementById('tree-view-controls').style.display = 'none';
                 // Display regular content
                 contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
             }
@@ -794,27 +821,51 @@
                 const lines = file.content.split('\n');
                 const nodes = parseTreeStructure(lines);
                 
-                // Create view with mode selector
+                // Show tree view controls in header
+                document.getElementById('tree-view-controls').style.display = 'flex';
+                
+                // Create view containers
                 contentViewer.innerHTML = `
                     <div>
-                        <div style="margin-bottom: 15px; display: flex; align-items: center;">
-                            <span style="font-weight: 500; color: #666;">View Mode:</span>
-                            <div class="view-mode-selector">
-                                <button class="view-mode-btn active" data-mode="simple">Simple (Collapsible)</button>
-                                <button class="view-mode-btn" data-mode="tree">Tree View</button>
-                            </div>
-                        </div>
                         <div id="tree-simple-view"></div>
                         <div id="tree-tree-view" style="display: none;"></div>
                     </div>
                 `;
                 
-                // Add event listeners to mode buttons
+                // Add event listeners to header mode buttons (remove old ones first)
+                const viewBtns = document.querySelectorAll('.view-mode-btn');
+                viewBtns.forEach(btn => {
+                    const newBtn = btn.cloneNode(true);
+                    btn.parentNode.replaceChild(newBtn, btn);
+                });
+                
                 document.querySelectorAll('.view-mode-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         switchTreeView(e.currentTarget.dataset.mode);
                     });
                 });
+                
+                // Add search functionality
+                const searchInput = document.getElementById('tree-search-input');
+                const searchBtn = document.getElementById('tree-search-btn');
+                const clearBtn = document.getElementById('tree-clear-btn');
+                
+                // Remove old listeners by cloning
+                const newSearchBtn = searchBtn.cloneNode(true);
+                searchBtn.parentNode.replaceChild(newSearchBtn, searchBtn);
+                
+                document.getElementById('tree-search-btn').addEventListener('click', () => findAndExpandNodes());
+                
+                searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        findAndExpandNodes();
+                    }
+                });
+                
+                const newClearBtn = clearBtn.cloneNode(true);
+                clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
+                
+                document.getElementById('tree-clear-btn').addEventListener('click', () => clearSearch());
                 
                 // Render both views
                 renderSimpleTreeView(nodes);
@@ -822,8 +873,82 @@
             } catch (error) {
                 // Fallback to simple text view on error
                 console.error('Error parsing tree file:', error);
+                document.getElementById('tree-view-controls').style.display = 'none';
                 contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
             }
+        }
+
+        function findAndExpandNodes() {
+            const searchTerm = document.getElementById('tree-search-input').value.trim();
+            if (!searchTerm) return;
+            
+            const simpleView = document.getElementById('tree-simple-view');
+            if (!simpleView || simpleView.style.display === 'none') return;
+            
+            // Clear previous highlights
+            clearSearch();
+            
+            // Find all text nodes and highlight matches
+            const allDetails = simpleView.querySelectorAll('details');
+            const allTextNodes = simpleView.querySelectorAll('.tree-node-path, .tree-node-type');
+            let foundMatch = false;
+            
+            allTextNodes.forEach(node => {
+                const text = node.textContent;
+                if (text.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    foundMatch = true;
+                    
+                    // Highlight the match
+                    const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
+                    const highlightedText = text.replace(regex, '<span class="tree-search-highlight">$1</span>');
+                    node.innerHTML = highlightedText;
+                    
+                    // Expand all parent details elements
+                    let parent = node.closest('details');
+                    while (parent) {
+                        parent.open = true;
+                        parent = parent.parentElement.closest('details');
+                    }
+                }
+            });
+            
+            if (foundMatch) {
+                document.getElementById('tree-clear-btn').style.display = 'inline-block';
+            }
+        }
+
+        function clearSearch() {
+            const simpleView = document.getElementById('tree-simple-view');
+            if (!simpleView) return;
+            
+            // Remove all highlights
+            const highlights = simpleView.querySelectorAll('.tree-search-highlight');
+            highlights.forEach(highlight => {
+                const parent = highlight.parentNode;
+                parent.textContent = parent.textContent; // This removes all HTML tags
+            });
+            
+            // Collapse all details
+            const allDetails = simpleView.querySelectorAll('details');
+            allDetails.forEach(details => {
+                details.open = false;
+            });
+            
+            // Clear search input
+            document.getElementById('tree-search-input').value = '';
+            document.getElementById('tree-clear-btn').style.display = 'none';
+            
+            // Re-render to restore original content
+            const currentFile = parsedData.files[currentFileIndex];
+            if (currentFile && currentFile.filename.endsWith('.tree.txt')) {
+                const lines = currentFile.content.split('\n');
+                const nodes = parseTreeStructure(lines);
+                renderSimpleTreeView(nodes);
+            }
+        }
+
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
 
         function parseTreeStructure(lines) {
@@ -882,10 +1007,6 @@
                     const details = document.createElement('details');
                     const summary = document.createElement('summary');
                     
-                    const toggle = document.createElement('span');
-                    toggle.className = 'tree-node-toggle';
-                    toggle.textContent = '▶';
-                    
                     const content = document.createElement('span');
                     content.className = 'tree-node-content';
                     content.innerHTML = `<span class="tree-node-path">${escapeHtml(node.path)}</span>`;
@@ -893,14 +1014,8 @@
                         content.innerHTML += `<span class="tree-node-type">(${escapeHtml(node.type)})</span>`;
                     }
                     
-                    summary.appendChild(toggle);
                     summary.appendChild(content);
                     details.appendChild(summary);
-                    
-                    // Update toggle icon on state change
-                    details.addEventListener('toggle', () => {
-                        toggle.textContent = details.open ? '▼' : '▶';
-                    });
                     
                     const nodeDiv = document.createElement('div');
                     nodeDiv.className = 'tree-node';
@@ -918,12 +1033,7 @@
                     
                     const leafDiv = document.createElement('div');
                     leafDiv.style.padding = '2px 0';
-                    leafDiv.style.display = 'flex';
-                    leafDiv.style.alignItems = 'center';
-                    
-                    const toggle = document.createElement('span');
-                    toggle.className = 'tree-node-toggle';
-                    toggle.textContent = ' ';
+                    leafDiv.style.paddingLeft = '20px';
                     
                     const content = document.createElement('span');
                     content.className = 'tree-node-content';
@@ -932,7 +1042,6 @@
                         content.innerHTML += `<span class="tree-node-type">(${escapeHtml(node.type)})</span>`;
                     }
                     
-                    leafDiv.appendChild(toggle);
                     leafDiv.appendChild(content);
                     nodeDiv.appendChild(leafDiv);
                     container.appendChild(nodeDiv);
