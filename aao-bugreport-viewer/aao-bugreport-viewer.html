@@ -1285,19 +1285,30 @@
             container.innerHTML = '';
             container.className = 'tree-view-container';
             
-            function renderTreeNode(node, container, prefix = '', isLast = true) {
+            function renderTreeNode(node, container, prefix = '', isLast = true, isRoot = false) {
                 const nodeDiv = document.createElement('div');
                 nodeDiv.className = 'tree-view-node';
                 
+                // Extract just the leaf name from the path
+                let displayName = node.path;
+                if (node.path.includes('/')) {
+                    const parts = node.path.split('/');
+                    displayName = parts[parts.length - 1];
+                }
+                
+                // Build the line with tree graphics
+                const linePrefix = isRoot ? '' : prefix;
+                const connector = isRoot ? '' : (isLast ? '└─ ' : '├─ ');
+                
                 const lines = document.createElement('span');
                 lines.className = 'tree-view-lines';
-                lines.textContent = prefix;
+                lines.textContent = linePrefix + connector;
                 
                 const content = document.createElement('span');
                 content.className = 'tree-view-content';
-                content.innerHTML = `<span class="tree-view-name">${escapeHtml(node.path)}</span>`;
+                content.innerHTML = `<span class="tree-view-name">${escapeHtml(displayName)}</span>`;
                 if (node.type) {
-                    content.innerHTML += `<span class="tree-view-type">(${escapeHtml(node.type)})</span>`;
+                    content.innerHTML += ` <span class="tree-view-type">${escapeHtml(node.type)}</span>`;
                 }
                 
                 nodeDiv.appendChild(lines);
@@ -1308,15 +1319,14 @@
                 if (node.children && node.children.length > 0) {
                     node.children.forEach((child, index) => {
                         const isChildLast = index === node.children.length - 1;
-                        const childPrefix = prefix + (isLast ? '  ' : '│ ');
-                        const connector = isChildLast ? '└─' : '├─';
-                        renderTreeNode(child, container, childPrefix + connector, isChildLast);
+                        const childPrefix = isRoot ? '' : (prefix + (isLast ? '    ' : '│   '));
+                        renderTreeNode(child, container, childPrefix, isChildLast, false);
                     });
                 }
             }
             
             nodes.forEach((node, index) => {
-                renderTreeNode(node, container, '', index === nodes.length - 1);
+                renderTreeNode(node, container, '', index === nodes.length - 1, true);
             });
         }
 
