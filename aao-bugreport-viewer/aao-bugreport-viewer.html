@@ -1306,6 +1306,10 @@
                 if (hasChildren) {
                     // Use details/summary for collapsible hierarchy
                     const details = document.createElement('details');
+                    // Mark hierarchy nodes with tree children as root nodes
+                    if (hierNode.treeChildren && hierNode.treeChildren.length > 0) {
+                        details.className = 'tree-node-root';
+                    }
                     const summary = document.createElement('summary');
                     
                     const content = document.createElement('span');
@@ -1331,7 +1335,7 @@
                     // Then render tree structure children
                     if (hierNode.treeChildren && hierNode.treeChildren.length > 0) {
                         hierNode.treeChildren.forEach(child => {
-                            renderTreeNode(child, childContainer, true); // Mark as root
+                            renderTreeNode(child, childContainer, false); // Children of hierarchy node
                         });
                     }
                     
