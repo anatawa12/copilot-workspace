@@ -811,7 +811,7 @@
                 // Add event listeners to mode buttons
                 document.querySelectorAll('.view-mode-btn').forEach(btn => {
                     btn.addEventListener('click', function() {
-                        switchTreeView(this.getAttribute('data-mode'));
+                        switchTreeView(this.dataset.mode);
                     });
                 });
                 
@@ -970,7 +970,7 @@
                 simpleView.style.display = 'block';
                 treeView.style.display = 'none';
                 buttons.forEach(btn => {
-                    if (btn.getAttribute('data-mode') === 'simple') {
+                    if (btn.dataset.mode === 'simple') {
                         btn.classList.add('active');
                     } else {
                         btn.classList.remove('active');
@@ -980,7 +980,7 @@
                 simpleView.style.display = 'none';
                 treeView.style.display = 'block';
                 buttons.forEach(btn => {
-                    if (btn.getAttribute('data-mode') === 'tree') {
+                    if (btn.dataset.mode === 'tree') {
                         btn.classList.add('active');
                     } else {
                         btn.classList.remove('active');
