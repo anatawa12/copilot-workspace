@@ -810,8 +810,8 @@
                 
                 // Add event listeners to mode buttons
                 document.querySelectorAll('.view-mode-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        switchTreeView(this.dataset.mode);
+                    btn.addEventListener('click', (e) => {
+                        switchTreeView(e.currentTarget.dataset.mode);
                     });
                 });
                 
@@ -873,7 +873,7 @@
             const container = document.getElementById('tree-simple-view');
             container.innerHTML = '';
             
-            function renderNode(node, container) {
+            function renderSimpleNode(node, container) {
                 const nodeDiv = document.createElement('div');
                 nodeDiv.className = 'tree-node';
                 
@@ -902,7 +902,7 @@
                     childrenDiv.className = 'tree-node-children collapsed';
                     
                     node.children.forEach(child => {
-                        renderNode(child, childrenDiv);
+                        renderSimpleNode(child, childrenDiv);
                     });
                     
                     nodeDiv.appendChild(childrenDiv);
@@ -917,7 +917,7 @@
                 container.appendChild(nodeDiv);
             }
             
-            nodes.forEach(node => renderNode(node, container));
+            nodes.forEach(node => renderSimpleNode(node, container));
         }
 
         function renderTreeView(nodes) {
@@ -925,7 +925,7 @@
             container.innerHTML = '';
             container.className = 'tree-view-container';
             
-            function renderNode(node, container, prefix = '', isLast = true) {
+            function renderTreeNode(node, container, prefix = '', isLast = true) {
                 const nodeDiv = document.createElement('div');
                 nodeDiv.className = 'tree-view-node';
                 
@@ -950,13 +950,13 @@
                         const isChildLast = index === node.children.length - 1;
                         const childPrefix = prefix + (isLast ? '  ' : '│ ');
                         const connector = isChildLast ? '└─' : '├─';
-                        renderNode(child, container, childPrefix + connector, isChildLast);
+                        renderTreeNode(child, container, childPrefix + connector, isChildLast);
                     });
                 }
             }
             
             nodes.forEach((node, index) => {
-                renderNode(node, container, '', index === nodes.length - 1);
+                renderTreeNode(node, container, '', index === nodes.length - 1);
             });
         }
 
