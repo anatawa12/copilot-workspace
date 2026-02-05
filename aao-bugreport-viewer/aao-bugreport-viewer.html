@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AAO-BugReport-File Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #input-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #input-container.hidden {
+            display: none;
+        }
+
+        .input-card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        #drop-zone {
+            border: 3px dashed #667eea;
+            border-radius: 8px;
+            padding: 60px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+
+        #drop-zone:hover, #drop-zone.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+        }
+
+        #drop-zone p {
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        #drop-zone small {
+            color: #999;
+            font-size: 14px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #viewer-container {
+            display: none;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        #viewer-container.visible {
+            display: flex;
+        }
+
+        #toolbar {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #toolbar h2 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        #toolbar button {
+            background: #34495e;
+            padding: 8px 16px;
+            font-size: 14px;
+            margin-top: 0;
+        }
+
+        #toolbar button:hover {
+            background: #4a5f7f;
+        }
+
+        #main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #file-list-panel {
+            width: 300px;
+            background: #f5f7fa;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: #34495e;
+            color: white;
+            padding: 12px 15px;
+            font-weight: 500;
+            font-size: 14px;
+            border-bottom: 1px solid #2c3e50;
+        }
+
+        #headers-section {
+            padding: 15px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #headers-section h3 {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+        }
+
+        #headers-section h3:before {
+            content: '▶';
+            display: inline-block;
+            margin-right: 6px;
+            transition: transform 0.2s;
+            font-size: 10px;
+        }
+
+        #headers-section h3.expanded:before {
+            transform: rotate(90deg);
+        }
+
+        .headers-content {
+            display: none;
+            margin-top: 8px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .headers-content.visible {
+            display: block;
+        }
+
+        .header-item {
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .header-key {
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        #file-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #e9ecef;
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: #e9ecef;
+        }
+
+        .file-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .file-name {
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+
+        .file-info {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .file-item.active .file-info {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        #content-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #content-header {
+            background: #fff;
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #content-filename {
+            font-weight: 500;
+            font-size: 16px;
+            color: #333;
+        }
+
+        #file-headers-toggle {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #file-headers-toggle:hover {
+            background: #5568d3;
+        }
+
+        #file-headers {
+            display: none;
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        #file-headers.visible {
+            display: block;
+        }
+
+        #content-viewer {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+            background: #fff;
+        }
+
+        #content-text {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #333;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            background: #fef5f5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .empty-state-text {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Input Container -->
+    <div id="input-container">
+        <div class="input-card">
+            <h1>AAO-BugReport-File Viewer</h1>
+            <p class="subtitle">Parse and view files in AAO-BugReport-File/1.0 format</p>
+            
+            <div id="drop-zone">
+                <p>📁 Drop a file here</p>
+                <small>Supports .gz (gzip) and plain text files</small>
+            </div>
+            
+            <div style="text-align: center; margin: 20px 0; color: #999;">— OR —</div>
+            
+            <textarea id="text-input" placeholder="Paste AAO-BugReport-File content here..."></textarea>
+            
+            <div style="text-align: center;">
+                <button id="parse-button">Parse Content</button>
+            </div>
+            
+            <div id="error-container"></div>
+        </div>
+    </div>
+
+    <!-- Viewer Container -->
+    <div id="viewer-container">
+        <div id="toolbar">
+            <h2>AAO-BugReport-File Viewer</h2>
+            <button id="back-button">← Back to Input</button>
+        </div>
+        
+        <div id="main-content">
+            <div id="file-list-panel">
+                <div class="panel-header">Files</div>
+                <div id="headers-section">
+                    <h3 id="global-headers-toggle">Global Headers</h3>
+                    <div id="global-headers" class="headers-content"></div>
+                </div>
+                <div id="file-list"></div>
+            </div>
+            
+            <div id="content-panel">
+                <div id="content-header">
+                    <span id="content-filename">Select a file to view</span>
+                    <button id="file-headers-toggle" style="display: none;">Show File Headers</button>
+                </div>
+                <div id="file-headers"></div>
+                <div id="content-viewer">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📄</div>
+                        <div class="empty-state-text">Select a file from the list to view its content</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="file-input" style="display: none;" accept=".gz,.txt">
+
+    <script>
+        // State
+        let parsedData = null;
+        let currentFileIndex = -1;
+
+        // DOM Elements
+        const inputContainer = document.getElementById('input-container');
+        const viewerContainer = document.getElementById('viewer-container');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const textInput = document.getElementById('text-input');
+        const parseButton = document.getElementById('parse-button');
+        const backButton = document.getElementById('back-button');
+        const errorContainer = document.getElementById('error-container');
+        const globalHeadersToggle = document.getElementById('global-headers-toggle');
+        const globalHeaders = document.getElementById('global-headers');
+        const fileList = document.getElementById('file-list');
+        const contentFilename = document.getElementById('content-filename');
+        const fileHeadersToggle = document.getElementById('file-headers-toggle');
+        const fileHeaders = document.getElementById('file-headers');
+        const contentViewer = document.getElementById('content-viewer');
+
+        // Parser
+        class AAOBugReportParser {
+            parse(content) {
+                const lines = content.split('\n');
+                
+                // Check format header
+                if (lines.length === 0 || !lines[0].trim().startsWith('AAO-BugReport-File/1.0')) {
+                    throw new Error('Invalid file format. Expected AAO-BugReport-File/1.0');
+                }
+
+                let lineIndex = 1;
+                const globalHeaders = [];
+                let boundary = null;
+
+                // Parse global headers
+                while (lineIndex < lines.length && lines[lineIndex].trim() !== '') {
+                    const line = lines[lineIndex].trim();
+                    const colonIndex = line.indexOf(':');
+                    if (colonIndex > 0) {
+                        const key = line.substring(0, colonIndex).trim();
+                        const value = line.substring(colonIndex + 1).trim();
+                        globalHeaders.push({ key, value });
+                        
+                        if (key.toLowerCase() === 'boundary') {
+                            boundary = value;
+                        }
+                    }
+                    lineIndex++;
+                }
+
+                if (!boundary) {
+                    throw new Error('No boundary found in global headers');
+                }
+
+                // Skip empty line after headers
+                lineIndex++;
+
+                // Parse blobs/files
+                const files = [];
+                while (lineIndex < lines.length) {
+                    const line = lines[lineIndex].trim();
+                    
+                    // Check for boundary
+                    if (line === `--${boundary}`) {
+                        lineIndex++;
+                        
+                        // Parse blob headers
+                        const blobHeaders = [];
+                        while (lineIndex < lines.length && lines[lineIndex].trim() !== '') {
+                            const headerLine = lines[lineIndex].trim();
+                            const colonIndex = headerLine.indexOf(':');
+                            if (colonIndex > 0) {
+                                const key = headerLine.substring(0, colonIndex).trim();
+                                const value = headerLine.substring(colonIndex + 1).trim();
+                                blobHeaders.push({ key, value });
+                            }
+                            lineIndex++;
+                        }
+                        
+                        // Skip empty line after blob headers
+                        lineIndex++;
+                        
+                        // Extract filename from Content-Disposition
+                        let filename = 'Unknown';
+                        const contentDisposition = blobHeaders.find(h => 
+                            h.key.toLowerCase() === 'content-disposition'
+                        );
+                        if (contentDisposition) {
+                            const match = contentDisposition.value.match(/filename="([^"]+)"/);
+                            if (match) {
+                                filename = match[1];
+                            }
+                        }
+                        
+                        // Read content until next boundary or end
+                        const contentLines = [];
+                        while (lineIndex < lines.length && 
+                               !lines[lineIndex].trim().startsWith(`--${boundary}`)) {
+                            contentLines.push(lines[lineIndex]);
+                            lineIndex++;
+                        }
+                        
+                        // Remove last empty line if present (from ToString() method)
+                        if (contentLines.length > 0 && contentLines[contentLines.length - 1] === '') {
+                            contentLines.pop();
+                        }
+                        
+                        files.push({
+                            filename,
+                            headers: blobHeaders,
+                            content: contentLines.join('\n')
+                        });
+                    } else {
+                        lineIndex++;
+                    }
+                }
+
+                return {
+                    globalHeaders,
+                    boundary,
+                    files
+                };
+            }
+        }
+
+        // Gzip decompression using pako
+        async function decompressGzip(arrayBuffer) {
+            // Load pako library dynamically
+            if (typeof pako === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js';
+                document.head.appendChild(script);
+                await new Promise((resolve) => {
+                    script.onload = resolve;
+                });
+            }
+            
+            const uint8Array = new Uint8Array(arrayBuffer);
+            const decompressed = pako.inflate(uint8Array);
+            const decoder = new TextDecoder('utf-8');
+            return decoder.decode(decompressed);
+        }
+
+        // File handling
+        async function handleFile(file) {
+            try {
+                showError('');
+                const arrayBuffer = await file.arrayBuffer();
+                
+                let content;
+                if (file.name.endsWith('.gz')) {
+                    content = await decompressGzip(arrayBuffer);
+                } else {
+                    const decoder = new TextDecoder('utf-8');
+                    content = decoder.decode(arrayBuffer);
+                }
+                
+                parseAndDisplay(content);
+            } catch (error) {
+                showError('Error reading file: ' + error.message);
+            }
+        }
+
+        // Parse and display
+        function parseAndDisplay(content) {
+            try {
+                showError('');
+                const parser = new AAOBugReportParser();
+                parsedData = parser.parse(content);
+                
+                displayViewer();
+            } catch (error) {
+                showError('Error parsing content: ' + error.message);
+            }
+        }
+
+        // Display viewer
+        function displayViewer() {
+            inputContainer.classList.add('hidden');
+            viewerContainer.classList.add('visible');
+            
+            // Display global headers
+            displayGlobalHeaders();
+            
+            // Display file list
+            displayFileList();
+            
+            // Reset content view
+            currentFileIndex = -1;
+            showEmptyState();
+        }
+
+        function displayGlobalHeaders() {
+            globalHeaders.innerHTML = '';
+            parsedData.globalHeaders.forEach(header => {
+                const div = document.createElement('div');
+                div.className = 'header-item';
+                div.innerHTML = `<span class="header-key">${escapeHtml(header.key)}:</span> ${escapeHtml(header.value)}`;
+                globalHeaders.appendChild(div);
+            });
+        }
+
+        function displayFileList() {
+            fileList.innerHTML = '';
+            parsedData.files.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.innerHTML = `
+                    <div class="file-name">${escapeHtml(file.filename)}</div>
+                    <div class="file-info">${formatFileSize(file.content.length)}</div>
+                `;
+                div.addEventListener('click', () => selectFile(index));
+                fileList.appendChild(div);
+            });
+        }
+
+        function selectFile(index) {
+            currentFileIndex = index;
+            const file = parsedData.files[index];
+            
+            // Update active state
+            const items = fileList.querySelectorAll('.file-item');
+            items.forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+            
+            // Update content header
+            contentFilename.textContent = file.filename;
+            fileHeadersToggle.style.display = 'inline-block';
+            
+            // Display file headers
+            displayFileHeaders(file.headers);
+            fileHeaders.classList.remove('visible');
+            fileHeadersToggle.textContent = 'Show File Headers';
+            
+            // Display content
+            contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
+        }
+
+        function displayFileHeaders(headers) {
+            fileHeaders.innerHTML = '';
+            headers.forEach(header => {
+                const div = document.createElement('div');
+                div.className = 'header-item';
+                div.innerHTML = `<span class="header-key">${escapeHtml(header.key)}:</span> ${escapeHtml(header.value)}`;
+                fileHeaders.appendChild(div);
+            });
+        }
+
+        function showEmptyState() {
+            contentFilename.textContent = 'Select a file to view';
+            fileHeadersToggle.style.display = 'none';
+            fileHeaders.classList.remove('visible');
+            contentViewer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📄</div>
+                    <div class="empty-state-text">Select a file from the list to view its content</div>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            if (message) {
+                errorContainer.innerHTML = `<div class="error-message">${escapeHtml(message)}</div>`;
+            } else {
+                errorContainer.innerHTML = '';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Event listeners
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        parseButton.addEventListener('click', () => {
+            const content = textInput.value.trim();
+            if (content) {
+                parseAndDisplay(content);
+            } else {
+                showError('Please enter some content to parse');
+            }
+        });
+
+        backButton.addEventListener('click', () => {
+            viewerContainer.classList.remove('visible');
+            inputContainer.classList.remove('hidden');
+            parsedData = null;
+            currentFileIndex = -1;
+        });
+
+        globalHeadersToggle.addEventListener('click', () => {
+            globalHeadersToggle.classList.toggle('expanded');
+            globalHeaders.classList.toggle('visible');
+        });
+
+        fileHeadersToggle.addEventListener('click', () => {
+            const isVisible = fileHeaders.classList.toggle('visible');
+            fileHeadersToggle.textContent = isVisible ? 'Hide File Headers' : 'Show File Headers';
+        });
+    </script>
+</body>
+</html>

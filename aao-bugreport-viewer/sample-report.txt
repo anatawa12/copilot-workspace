@@ -1,0 +1,36 @@
+AAO-BugReport-File/1.0
+boundary: 1a2b3c4d5e6f7g8h9i0j
+version: 1.0
+reporter: Test User
+date: 2026-02-05
+
+--1a2b3c4d5e6f7g8h9i0j
+Content-Disposition: attachment; filename="system-info.txt"
+
+Operating System: Windows 11
+CPU: Intel Core i7-9700K
+RAM: 16 GB
+Graphics: NVIDIA GeForce RTX 2060
+
+--1a2b3c4d5e6f7g8h9i0j
+Content-Disposition: attachment; filename="error-log.txt"
+
+[2026-02-05 10:23:45] ERROR: Failed to connect to database
+[2026-02-05 10:23:46] ERROR: Retrying connection...
+[2026-02-05 10:23:47] INFO: Connection established successfully
+[2026-02-05 10:24:01] WARNING: High memory usage detected (87%)
+
+--1a2b3c4d5e6f7g8h9i0j
+Content-Disposition: attachment; filename="config.json"
+
+{
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "myapp"
+  },
+  "features": {
+    "experimental": true,
+    "debug": false
+  }
+}
