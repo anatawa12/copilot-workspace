@@ -341,6 +341,115 @@
         .empty-state-text {
             font-size: 16px;
         }
+
+        /* Tree view styles */
+        .view-mode-selector {
+            display: inline-flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .view-mode-btn {
+            background: #e9ecef;
+            color: #333;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .view-mode-btn:hover {
+            background: #dee2e6;
+        }
+
+        .view-mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tree-node {
+            margin-left: 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .tree-node-header {
+            cursor: pointer;
+            padding: 2px 0;
+            user-select: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .tree-node-header:hover {
+            background: #f8f9fa;
+        }
+
+        .tree-node-toggle {
+            display: inline-block;
+            width: 16px;
+            text-align: center;
+            color: #999;
+            font-size: 10px;
+        }
+
+        .tree-node-content {
+            display: inline;
+            color: #333;
+        }
+
+        .tree-node-path {
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .tree-node-type {
+            color: #999;
+            margin-left: 5px;
+        }
+
+        .tree-node-children {
+            margin-left: 20px;
+        }
+
+        .tree-node-children.collapsed {
+            display: none;
+        }
+
+        .tree-view-container {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .tree-view-node {
+            display: flex;
+            align-items: flex-start;
+            padding: 2px 0;
+        }
+
+        .tree-view-lines {
+            flex-shrink: 0;
+            color: #999;
+            margin-right: 8px;
+        }
+
+        .tree-view-content {
+            flex: 1;
+        }
+
+        .tree-view-name {
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .tree-view-type {
+            color: #999;
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
@@ -619,8 +728,13 @@
             fileHeaders.classList.remove('visible');
             fileHeadersToggle.textContent = 'Show File Headers';
             
-            // Display content
-            contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
+            // Check if this is a .tree.txt file
+            if (file.filename.endsWith('.tree.txt')) {
+                displayTreeFile(file);
+            } else {
+                // Display regular content
+                contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
+            }
         }
 
         function displayFileHeaders(headers) {
@@ -672,6 +786,191 @@
             if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
+
+        // Tree file handling
+        function displayTreeFile(file) {
+            try {
+                const lines = file.content.split('\n');
+                const nodes = parseTreeStructure(lines);
+                
+                // Create view with mode selector
+                contentViewer.innerHTML = `
+                    <div>
+                        <div style="margin-bottom: 15px; display: flex; align-items: center;">
+                            <span style="font-weight: 500; color: #666;">View Mode:</span>
+                            <div class="view-mode-selector">
+                                <button class="view-mode-btn active" onclick="switchTreeView('simple')">Simple (Collapsible)</button>
+                                <button class="view-mode-btn" onclick="switchTreeView('tree')">Tree View</button>
+                            </div>
+                        </div>
+                        <div id="tree-simple-view"></div>
+                        <div id="tree-tree-view" style="display: none;"></div>
+                    </div>
+                `;
+                
+                // Render both views
+                renderSimpleTreeView(nodes);
+                renderTreeView(nodes);
+            } catch (error) {
+                // Fallback to simple text view on error
+                console.error('Error parsing tree file:', error);
+                contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
+            }
+        }
+
+        function parseTreeStructure(lines) {
+            const nodes = [];
+            const stack = [{ indent: -1, children: nodes }];
+            
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                
+                const indent = line.search(/\S/);
+                const content = line.trim();
+                
+                // Parse node: path (type) or path: type
+                let path = '';
+                let type = '';
+                
+                const parenMatch = content.match(/^(.+?)\s*\(([^)]+)\)$/);
+                const colonMatch = content.match(/^(.+?):\s*(.+)$/);
+                
+                if (parenMatch) {
+                    path = parenMatch[1];
+                    type = parenMatch[2];
+                } else if (colonMatch) {
+                    path = colonMatch[1];
+                    type = colonMatch[2];
+                } else {
+                    path = content;
+                }
+                
+                const node = { indent, path, type, children: [], originalLine: line };
+                
+                // Find parent
+                while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
+                    stack.pop();
+                }
+                
+                if (stack.length > 0) {
+                    stack[stack.length - 1].children.push(node);
+                }
+                
+                stack.push(node);
+            }
+            
+            return nodes;
+        }
+
+        function renderSimpleTreeView(nodes) {
+            const container = document.getElementById('tree-simple-view');
+            container.innerHTML = '';
+            
+            function renderNode(node, container) {
+                const nodeDiv = document.createElement('div');
+                nodeDiv.className = 'tree-node';
+                
+                const hasChildren = node.children && node.children.length > 0;
+                
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'tree-node-header';
+                
+                const toggle = document.createElement('span');
+                toggle.className = 'tree-node-toggle';
+                toggle.textContent = hasChildren ? '▼' : ' ';
+                
+                const content = document.createElement('span');
+                content.className = 'tree-node-content';
+                content.innerHTML = `<span class="tree-node-path">${escapeHtml(node.path)}</span>`;
+                if (node.type) {
+                    content.innerHTML += `<span class="tree-node-type">(${escapeHtml(node.type)})</span>`;
+                }
+                
+                headerDiv.appendChild(toggle);
+                headerDiv.appendChild(content);
+                nodeDiv.appendChild(headerDiv);
+                
+                if (hasChildren) {
+                    const childrenDiv = document.createElement('div');
+                    childrenDiv.className = 'tree-node-children';
+                    
+                    node.children.forEach(child => {
+                        renderNode(child, childrenDiv);
+                    });
+                    
+                    nodeDiv.appendChild(childrenDiv);
+                    
+                    // Toggle functionality
+                    headerDiv.addEventListener('click', () => {
+                        childrenDiv.classList.toggle('collapsed');
+                        toggle.textContent = childrenDiv.classList.contains('collapsed') ? '▶' : '▼';
+                    });
+                }
+                
+                container.appendChild(nodeDiv);
+            }
+            
+            nodes.forEach(node => renderNode(node, container));
+        }
+
+        function renderTreeView(nodes) {
+            const container = document.getElementById('tree-tree-view');
+            container.innerHTML = '';
+            container.className = 'tree-view-container';
+            
+            function renderNode(node, container, prefix = '', isLast = true) {
+                const nodeDiv = document.createElement('div');
+                nodeDiv.className = 'tree-view-node';
+                
+                const lines = document.createElement('span');
+                lines.className = 'tree-view-lines';
+                lines.textContent = prefix;
+                
+                const content = document.createElement('span');
+                content.className = 'tree-view-content';
+                content.innerHTML = `<span class="tree-view-name">${escapeHtml(node.path)}</span>`;
+                if (node.type) {
+                    content.innerHTML += `<span class="tree-view-type">(${escapeHtml(node.type)})</span>`;
+                }
+                
+                nodeDiv.appendChild(lines);
+                nodeDiv.appendChild(content);
+                container.appendChild(nodeDiv);
+                
+                // Render children
+                if (node.children && node.children.length > 0) {
+                    node.children.forEach((child, index) => {
+                        const isChildLast = index === node.children.length - 1;
+                        const childPrefix = prefix + (isLast ? '  ' : '│ ');
+                        const connector = isChildLast ? '└─' : '├─';
+                        renderNode(child, container, childPrefix + connector, isChildLast);
+                    });
+                }
+            }
+            
+            nodes.forEach((node, index) => {
+                renderNode(node, container, '', index === nodes.length - 1);
+            });
+        }
+
+        // Global function for view switching (called from onclick)
+        window.switchTreeView = function(mode) {
+            const simpleView = document.getElementById('tree-simple-view');
+            const treeView = document.getElementById('tree-tree-view');
+            const buttons = document.querySelectorAll('.view-mode-btn');
+            
+            if (mode === 'simple') {
+                simpleView.style.display = 'block';
+                treeView.style.display = 'none';
+                buttons[0].classList.add('active');
+                buttons[1].classList.remove('active');
+            } else {
+                simpleView.style.display = 'none';
+                treeView.style.display = 'block';
+                buttons[0].classList.remove('active');
+                buttons[1].classList.add('active');
+            }
+        };
 
         // Event listeners
         dropZone.addEventListener('click', () => {

@@ -1,0 +1,38 @@
+AAO-BugReport-File/1.0
+boundary: abc123test
+version: 1.0
+type: Unity Scene Hierarchy
+
+--abc123test
+Content-Disposition: attachment; filename="hierarchy.tree.txt"
+
+GameObject/Avatar/Body (Transform)
+  Armature (SkinnedMeshRenderer)
+    Hips: HumanBodyBones.Hips
+      Spine: HumanBodyBones.Spine
+        Chest: HumanBodyBones.Chest
+          Neck: HumanBodyBones.Neck
+            Head: HumanBodyBones.Head
+          LeftShoulder (Transform)
+            LeftUpperArm: HumanBodyBones.LeftUpperArm
+              LeftLowerArm: HumanBodyBones.LeftLowerArm
+                LeftHand: HumanBodyBones.LeftHand
+          RightShoulder (Transform)
+            RightUpperArm: HumanBodyBones.RightUpperArm
+              RightLowerArm: HumanBodyBones.RightLowerArm
+                RightHand: HumanBodyBones.RightHand
+      LeftUpperLeg: HumanBodyBones.LeftUpperLeg
+        LeftLowerLeg: HumanBodyBones.LeftLowerLeg
+          LeftFoot: HumanBodyBones.LeftFoot
+      RightUpperLeg: HumanBodyBones.RightUpperLeg
+        RightLowerLeg: HumanBodyBones.RightLowerLeg
+          RightFoot: HumanBodyBones.RightFoot
+  Accessories (Transform)
+    Hat (MeshRenderer)
+    Glasses (MeshRenderer)
+
+--abc123test
+Content-Disposition: attachment; filename="normal-file.txt"
+
+This is a normal text file.
+It should display normally.

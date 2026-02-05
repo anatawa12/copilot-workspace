@@ -1,0 +1,24 @@
+GameObject/Avatar/Body (Transform)
+  Armature (SkinnedMeshRenderer)
+    Hips: HumanBodyBones.Hips
+      Spine: HumanBodyBones.Spine
+        Chest: HumanBodyBones.Chest
+          Neck: HumanBodyBones.Neck
+            Head: HumanBodyBones.Head
+          LeftShoulder (Transform)
+            LeftUpperArm: HumanBodyBones.LeftUpperArm
+              LeftLowerArm: HumanBodyBones.LeftLowerArm
+                LeftHand: HumanBodyBones.LeftHand
+          RightShoulder (Transform)
+            RightUpperArm: HumanBodyBones.RightUpperArm
+              RightLowerArm: HumanBodyBones.RightLowerArm
+                RightHand: HumanBodyBones.RightHand
+      LeftUpperLeg: HumanBodyBones.LeftUpperLeg
+        LeftLowerLeg: HumanBodyBones.LeftLowerLeg
+          LeftFoot: HumanBodyBones.LeftFoot
+      RightUpperLeg: HumanBodyBones.RightUpperLeg
+        RightLowerLeg: HumanBodyBones.RightLowerLeg
+          RightFoot: HumanBodyBones.RightFoot
+  Accessories (Transform)
+    Hat (MeshRenderer)
+    Glasses (MeshRenderer)
