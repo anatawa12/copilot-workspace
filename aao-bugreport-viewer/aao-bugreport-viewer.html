@@ -179,53 +179,30 @@
             border-bottom: 1px solid #2c3e50;
         }
 
-        #headers-section {
-            padding: 15px;
+        #global-headers-view {
+            padding: 20px;
             background: #fff;
-            border-bottom: 1px solid #ddd;
-        }
-
-        #headers-section h3 {
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 8px;
-            cursor: pointer;
-            user-select: none;
-            display: flex;
-            align-items: center;
-        }
-
-        #headers-section h3:before {
-            content: '▶';
-            display: inline-block;
-            margin-right: 6px;
-            transition: transform 0.2s;
-            font-size: 10px;
-        }
-
-        #headers-section h3.expanded:before {
-            transform: rotate(90deg);
-        }
-
-        .headers-content {
-            display: none;
-            margin-top: 8px;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 12px;
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            max-height: 200px;
             overflow-y: auto;
         }
 
-        .headers-content.visible {
-            display: block;
+        #global-headers-view h2 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .headers-grid {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.8;
         }
 
         .header-item {
-            margin-bottom: 4px;
+            margin-bottom: 8px;
             color: #333;
+            padding: 4px 0;
         }
 
         .header-key {
@@ -400,10 +377,6 @@
         <div id="main-content">
             <div id="file-list-panel">
                 <div class="panel-header">Files</div>
-                <div id="headers-section">
-                    <h3 id="global-headers-toggle">Global Headers</h3>
-                    <div id="global-headers" class="headers-content"></div>
-                </div>
                 <div id="file-list"></div>
             </div>
             
@@ -414,9 +387,9 @@
                 </div>
                 <div id="file-headers"></div>
                 <div id="content-viewer">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📄</div>
-                        <div class="empty-state-text">Select a file from the list to view its content</div>
+                    <div id="global-headers-view">
+                        <h2>Global Headers</h2>
+                        <div id="global-headers" class="headers-grid"></div>
                     </div>
                 </div>
             </div>
@@ -439,8 +412,6 @@
         const parseButton = document.getElementById('parse-button');
         const backButton = document.getElementById('back-button');
         const errorContainer = document.getElementById('error-container');
-        const globalHeadersToggle = document.getElementById('global-headers-toggle');
-        const globalHeaders = document.getElementById('global-headers');
         const fileList = document.getElementById('file-list');
         const contentFilename = document.getElementById('content-filename');
         const fileHeadersToggle = document.getElementById('file-headers-toggle');
@@ -603,30 +574,16 @@
             }
         }
 
-        // Display viewer
         function displayViewer() {
             inputContainer.classList.add('hidden');
             viewerContainer.classList.add('visible');
             
-            // Display global headers
-            displayGlobalHeaders();
-            
             // Display file list
             displayFileList();
             
-            // Reset content view
+            // Reset content view - show global headers
             currentFileIndex = -1;
-            showEmptyState();
-        }
-
-        function displayGlobalHeaders() {
-            globalHeaders.innerHTML = '';
-            parsedData.globalHeaders.forEach(header => {
-                const div = document.createElement('div');
-                div.className = 'header-item';
-                div.innerHTML = `<span class="header-key">${escapeHtml(header.key)}:</span> ${escapeHtml(header.value)}`;
-                globalHeaders.appendChild(div);
-            });
+            showGlobalHeadersView();
         }
 
         function displayFileList() {
@@ -676,16 +633,24 @@
             });
         }
 
-        function showEmptyState() {
-            contentFilename.textContent = 'Select a file to view';
+        function showGlobalHeadersView() {
+            contentFilename.textContent = 'Global Headers';
             fileHeadersToggle.style.display = 'none';
             fileHeaders.classList.remove('visible');
             contentViewer.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📄</div>
-                    <div class="empty-state-text">Select a file from the list to view its content</div>
+                <div id="global-headers-view">
+                    <h2>Global Headers</h2>
+                    <div id="global-headers" class="headers-grid"></div>
                 </div>
             `;
+            // Re-populate global headers after recreating the container
+            const globalHeadersContainer = document.getElementById('global-headers');
+            parsedData.globalHeaders.forEach(header => {
+                const div = document.createElement('div');
+                div.className = 'header-item';
+                div.innerHTML = `<span class="header-key">${escapeHtml(header.key)}:</span> ${escapeHtml(header.value)}`;
+                globalHeadersContainer.appendChild(div);
+            });
         }
 
         function showError(message) {
@@ -751,11 +716,6 @@
             inputContainer.classList.remove('hidden');
             parsedData = null;
             currentFileIndex = -1;
-        });
-
-        globalHeadersToggle.addEventListener('click', () => {
-            globalHeadersToggle.classList.toggle('expanded');
-            globalHeaders.classList.toggle('visible');
         });
 
         fileHeadersToggle.addEventListener('click', () => {
