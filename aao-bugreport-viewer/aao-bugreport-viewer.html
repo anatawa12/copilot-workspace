@@ -1136,14 +1136,19 @@
             if (!searchTerm) return;
             
             const simpleView = document.getElementById('tree-simple-view');
-            if (!simpleView || simpleView.style.display === 'none') return;
+            const treeView = document.getElementById('tree-tree-view');
+            
+            // Determine which view is active
+            const activeView = (simpleView && simpleView.style.display !== 'none') ? simpleView : 
+                               (treeView && treeView.style.display !== 'none') ? treeView : null;
+            
+            if (!activeView) return;
             
             // Clear previous highlights
             clearSearch();
             
             // Find all text nodes and highlight matches
-            const allDetails = simpleView.querySelectorAll('details');
-            const allTextNodes = simpleView.querySelectorAll('.tree-node-path, .tree-node-type');
+            const allTextNodes = activeView.querySelectorAll('.tree-node-path, .tree-node-type');
             let foundMatch = false;
             
             allTextNodes.forEach(node => {
@@ -1172,19 +1177,24 @@
 
         function clearSearch() {
             const simpleView = document.getElementById('tree-simple-view');
-            if (!simpleView) return;
+            const treeView = document.getElementById('tree-tree-view');
             
-            // Remove all highlights
-            const highlights = simpleView.querySelectorAll('.tree-search-highlight');
-            highlights.forEach(highlight => {
-                const parent = highlight.parentNode;
-                parent.textContent = parent.textContent; // This removes all HTML tags
-            });
-            
-            // Collapse all details
-            const allDetails = simpleView.querySelectorAll('details');
-            allDetails.forEach(details => {
-                details.open = false;
+            // Clear highlights and collapse in both views
+            [simpleView, treeView].forEach(view => {
+                if (!view) return;
+                
+                // Remove all highlights
+                const highlights = view.querySelectorAll('.tree-search-highlight');
+                highlights.forEach(highlight => {
+                    const parent = highlight.parentNode;
+                    parent.textContent = parent.textContent; // This removes all HTML tags
+                });
+                
+                // Collapse all details
+                const allDetails = view.querySelectorAll('details');
+                allDetails.forEach(details => {
+                    details.open = false;
+                });
             });
             
             // Clear search input
@@ -1197,6 +1207,7 @@
                 const lines = currentFile.content.split('\n');
                 const nodes = parseTreeStructure(lines);
                 renderSimpleTreeView(nodes);
+                renderTreeView(nodes);
             }
         }
 
