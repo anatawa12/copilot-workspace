@@ -799,14 +799,21 @@
                         <div style="margin-bottom: 15px; display: flex; align-items: center;">
                             <span style="font-weight: 500; color: #666;">View Mode:</span>
                             <div class="view-mode-selector">
-                                <button class="view-mode-btn active" onclick="switchTreeView('simple')">Simple (Collapsible)</button>
-                                <button class="view-mode-btn" onclick="switchTreeView('tree')">Tree View</button>
+                                <button class="view-mode-btn active" data-mode="simple">Simple (Collapsible)</button>
+                                <button class="view-mode-btn" data-mode="tree">Tree View</button>
                             </div>
                         </div>
                         <div id="tree-simple-view"></div>
                         <div id="tree-tree-view" style="display: none;"></div>
                     </div>
                 `;
+                
+                // Add event listeners to mode buttons
+                document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        switchTreeView(this.getAttribute('data-mode'));
+                    });
+                });
                 
                 // Render both views
                 renderSimpleTreeView(nodes);
@@ -877,7 +884,7 @@
                 
                 const toggle = document.createElement('span');
                 toggle.className = 'tree-node-toggle';
-                toggle.textContent = hasChildren ? '▼' : ' ';
+                toggle.textContent = hasChildren ? '▶' : ' ';
                 
                 const content = document.createElement('span');
                 content.className = 'tree-node-content';
@@ -892,7 +899,7 @@
                 
                 if (hasChildren) {
                     const childrenDiv = document.createElement('div');
-                    childrenDiv.className = 'tree-node-children';
+                    childrenDiv.className = 'tree-node-children collapsed';
                     
                     node.children.forEach(child => {
                         renderNode(child, childrenDiv);
@@ -953,8 +960,8 @@
             });
         }
 
-        // Global function for view switching (called from onclick)
-        window.switchTreeView = function(mode) {
+        // Function for view switching
+        function switchTreeView(mode) {
             const simpleView = document.getElementById('tree-simple-view');
             const treeView = document.getElementById('tree-tree-view');
             const buttons = document.querySelectorAll('.view-mode-btn');
@@ -962,15 +969,25 @@
             if (mode === 'simple') {
                 simpleView.style.display = 'block';
                 treeView.style.display = 'none';
-                buttons[0].classList.add('active');
-                buttons[1].classList.remove('active');
+                buttons.forEach(btn => {
+                    if (btn.getAttribute('data-mode') === 'simple') {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
             } else {
                 simpleView.style.display = 'none';
                 treeView.style.display = 'block';
-                buttons[0].classList.remove('active');
-                buttons[1].classList.add('active');
+                buttons.forEach(btn => {
+                    if (btn.getAttribute('data-mode') === 'tree') {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
             }
-        };
+        }
 
         // Event listeners
         dropZone.addEventListener('click', () => {
