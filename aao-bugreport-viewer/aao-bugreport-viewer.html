@@ -247,6 +247,27 @@
             color: rgba(255, 255, 255, 0.8);
         }
 
+        #show-global-headers-btn {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #e9ecef;
+            background: #f8f9fa;
+            transition: background 0.2s;
+            font-weight: 500;
+            font-size: 14px;
+            color: #667eea;
+            text-align: center;
+        }
+
+        #show-global-headers-btn:hover {
+            background: #e9ecef;
+        }
+
+        #show-global-headers-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
         #content-panel {
             flex: 1;
             display: flex;
@@ -516,6 +537,7 @@
         <div id="main-content">
             <div id="file-list-panel">
                 <div class="panel-header">Files</div>
+                <div id="show-global-headers-btn">📋 Global Headers</div>
                 <div id="file-list"></div>
             </div>
             
@@ -759,6 +781,7 @@
             items.forEach((item, i) => {
                 item.classList.toggle('active', i === index);
             });
+            document.getElementById('show-global-headers-btn').classList.remove('active');
             
             // Update content header
             contentFilename.textContent = file.filename;
@@ -794,6 +817,9 @@
             contentFilename.textContent = 'Global Headers';
             fileHeadersToggle.style.display = 'none';
             fileHeaders.classList.remove('visible');
+            document.getElementById('tree-view-controls').style.display = 'none';
+            document.getElementById('show-global-headers-btn').classList.add('active');
+            
             contentViewer.innerHTML = `
                 <div id="global-headers-view">
                     <h2>Global Headers</h2>
@@ -1177,6 +1203,15 @@
             viewerContainer.classList.remove('visible');
             inputContainer.classList.remove('hidden');
             parsedData = null;
+            currentFileIndex = -1;
+        });
+
+        document.getElementById('show-global-headers-btn').addEventListener('click', () => {
+            showGlobalHeadersView();
+            // Update active state
+            const items = fileList.querySelectorAll('.file-item');
+            items.forEach(item => item.classList.remove('active'));
+            document.getElementById('show-global-headers-btn').classList.add('active');
             currentFileIndex = -1;
         });
 
