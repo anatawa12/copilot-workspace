@@ -793,11 +793,13 @@
             fileHeaders.classList.remove('visible');
             fileHeadersToggle.textContent = 'Show File Headers';
             
-            // Check if this is a .tree.txt file
+            // Check file type and display appropriately
             if (file.filename.endsWith('.tree.txt')) {
                 displayTreeFile(file);
+            } else if (file.filename.endsWith('.log.txt')) {
+                displayLogFile(file);
             } else {
-                // Hide tree view controls for non-tree files
+                // Hide tree view controls for regular files
                 document.getElementById('tree-view-controls').style.display = 'none';
                 // Display regular content
                 contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
@@ -919,6 +921,139 @@
                 document.getElementById('tree-view-controls').style.display = 'none';
                 contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
             }
+        }
+
+        function displayLogFile(file) {
+            // Show tree view controls (reuse for log files)
+            document.getElementById('tree-view-controls').style.display = 'flex';
+            
+            // Create view containers - Simple and Raw modes for log files
+            contentViewer.innerHTML = `
+                <div>
+                    <div id="tree-simple-view"></div>
+                    <div id="tree-raw-view" style="display: none;"><pre id="content-text">${escapeHtml(file.content)}</pre></div>
+                </div>
+            `;
+            
+            // Add event listeners to header mode buttons (remove old ones first)
+            const viewBtns = document.querySelectorAll('.view-mode-btn');
+            viewBtns.forEach(btn => {
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+            });
+            
+            // Remove Tree button for log files, keep only Simple and Raw
+            const treeBtn = document.querySelector('.view-mode-btn[data-mode="tree"]');
+            if (treeBtn) treeBtn.style.display = 'none';
+            
+            document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    switchLogView(e.currentTarget.dataset.mode);
+                });
+            });
+            
+            // Render collapsible log view
+            renderCollapsibleLogView(file.content);
+        }
+
+        function switchLogView(mode) {
+            const simpleView = document.getElementById('tree-simple-view');
+            const rawView = document.getElementById('tree-raw-view');
+            const buttons = document.querySelectorAll('.view-mode-btn');
+            
+            if (mode === 'simple' && simpleView) {
+                simpleView.style.display = 'block';
+                rawView.style.display = 'none';
+            } else if (mode === 'raw' && rawView) {
+                simpleView.style.display = 'none';
+                rawView.style.display = 'block';
+            }
+            
+            // Update button states
+            buttons.forEach(btn => {
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function renderCollapsibleLogView(content) {
+            const container = document.getElementById('tree-simple-view');
+            container.innerHTML = '';
+            container.style.fontFamily = "'Consolas', 'Monaco', 'Courier New', monospace";
+            container.style.fontSize = '13px';
+            container.style.lineHeight = '1.6';
+            
+            const lines = content.split('\n');
+            let currentGroup = [];
+            let currentLevel = '';
+            
+            lines.forEach((line, index) => {
+                // Detect log level (ERROR, WARNING, INFO, DEBUG, etc.)
+                const levelMatch = line.match(/\[(.*?)\]\s+(ERROR|WARNING|WARN|INFO|DEBUG|TRACE)/i);
+                
+                if (levelMatch) {
+                    // Save previous group
+                    if (currentGroup.length > 0) {
+                        renderLogGroup(container, currentLevel, currentGroup);
+                    }
+                    // Start new group
+                    currentLevel = levelMatch[2].toUpperCase();
+                    currentGroup = [line];
+                } else if (currentGroup.length > 0) {
+                    // Add to current group
+                    currentGroup.push(line);
+                } else {
+                    // Standalone line
+                    const lineDiv = document.createElement('div');
+                    lineDiv.style.padding = '2px 0';
+                    lineDiv.style.color = '#666';
+                    lineDiv.textContent = line;
+                    container.appendChild(lineDiv);
+                }
+            });
+            
+            // Don't forget the last group
+            if (currentGroup.length > 0) {
+                renderLogGroup(container, currentLevel, currentGroup);
+            }
+        }
+
+        function renderLogGroup(container, level, lines) {
+            const details = document.createElement('details');
+            const summary = document.createElement('summary');
+            summary.style.cursor = 'pointer';
+            summary.style.padding = '4px 0';
+            summary.style.userSelect = 'none';
+            
+            // Color code by log level
+            let color = '#333';
+            if (level === 'ERROR') color = '#dc3545';
+            else if (level === 'WARNING' || level === 'WARN') color = '#ffc107';
+            else if (level === 'INFO') color = '#17a2b8';
+            else if (level === 'DEBUG' || level === 'TRACE') color = '#6c757d';
+            
+            summary.style.color = color;
+            summary.style.fontWeight = '500';
+            summary.textContent = lines[0];
+            
+            details.appendChild(summary);
+            
+            if (lines.length > 1) {
+                const contentDiv = document.createElement('div');
+                contentDiv.style.paddingLeft = '20px';
+                contentDiv.style.color = '#666';
+                lines.slice(1).forEach(line => {
+                    const lineDiv = document.createElement('div');
+                    lineDiv.textContent = line;
+                    contentDiv.appendChild(lineDiv);
+                });
+                details.appendChild(contentDiv);
+            }
+            
+            container.appendChild(details);
         }
 
         function findAndExpandNodes() {
