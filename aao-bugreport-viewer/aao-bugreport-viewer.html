@@ -877,21 +877,25 @@
                     </div>
                 `;
                 
-                // Add event listeners to header mode buttons (remove old ones first)
+                // Reset button states - make Simple active, show all buttons
+                document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                    // Remove any inline styles that might hide buttons
+                    btn.style.removeProperty('display');
+                    if (btn.dataset.mode === 'simple') {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                
+                // Add event listeners to header mode buttons (remove old ones first by cloning)
                 const viewBtns = document.querySelectorAll('.view-mode-btn');
                 viewBtns.forEach(btn => {
                     const newBtn = btn.cloneNode(true);
                     btn.parentNode.replaceChild(newBtn, btn);
                 });
                 
-                // Reset button states - make Simple active, show all buttons
                 document.querySelectorAll('.view-mode-btn').forEach(btn => {
-                    btn.style.display = 'inline-block';
-                    if (btn.dataset.mode === 'simple') {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
                     btn.addEventListener('click', (e) => {
                         switchTreeView(e.currentTarget.dataset.mode);
                     });
