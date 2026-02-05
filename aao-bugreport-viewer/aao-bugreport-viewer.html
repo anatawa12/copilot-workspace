@@ -1041,6 +1041,7 @@
             summary.style.cursor = 'pointer';
             summary.style.padding = '4px 0';
             summary.style.userSelect = 'none';
+            summary.style.display = 'block';
             
             // Color code by log level
             let color = '#333';
@@ -1051,14 +1052,32 @@
             
             summary.style.color = color;
             summary.style.fontWeight = '500';
-            summary.textContent = lines[0];
+            
+            // Show first line in summary
+            const summaryText = document.createElement('div');
+            summaryText.textContent = lines[0];
+            summary.appendChild(summaryText);
+            
+            // Show second line as preview (if exists) when collapsed
+            if (lines.length > 1) {
+                const previewDiv = document.createElement('div');
+                previewDiv.style.color = '#666';
+                previewDiv.style.fontWeight = 'normal';
+                previewDiv.style.paddingLeft = '20px';
+                previewDiv.style.marginTop = '2px';
+                previewDiv.className = 'log-preview';
+                previewDiv.textContent = lines[1];
+                summary.appendChild(previewDiv);
+            }
             
             details.appendChild(summary);
             
+            // Add all remaining lines in details content
             if (lines.length > 1) {
                 const contentDiv = document.createElement('div');
                 contentDiv.style.paddingLeft = '20px';
                 contentDiv.style.color = '#666';
+                contentDiv.style.marginTop = '4px';
                 lines.slice(1).forEach(line => {
                     const lineDiv = document.createElement('div');
                     lineDiv.textContent = line;
@@ -1066,6 +1085,14 @@
                 });
                 details.appendChild(contentDiv);
             }
+            
+            // Hide preview when details is opened
+            details.addEventListener('toggle', () => {
+                const preview = summary.querySelector('.log-preview');
+                if (preview) {
+                    preview.style.display = details.open ? 'none' : 'block';
+                }
+            });
             
             container.appendChild(details);
         }
