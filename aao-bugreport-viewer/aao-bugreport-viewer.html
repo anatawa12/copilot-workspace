@@ -468,6 +468,19 @@
             margin-left: 5px;
         }
 
+        /* Root node styling - distinguishes actual tree roots from hierarchy path nodes */
+        .tree-node-root > summary {
+            font-weight: 600;
+            background: #f0f4ff;
+            padding: 3px 5px;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+
+        .tree-node-root > summary:hover {
+            background: #e0ebff;
+        }
+
         .tree-view-container {
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 13px;
@@ -1318,7 +1331,7 @@
                     // Then render tree structure children
                     if (hierNode.treeChildren && hierNode.treeChildren.length > 0) {
                         hierNode.treeChildren.forEach(child => {
-                            renderTreeNode(child, childContainer);
+                            renderTreeNode(child, childContainer, true); // Mark as root
                         });
                     }
                     
@@ -1342,11 +1355,15 @@
                 }
             }
             
-            function renderTreeNode(node, parentElement) {
+            function renderTreeNode(node, parentElement, isRoot = false) {
                 const hasChildren = node.children && node.children.length > 0;
                 
                 if (hasChildren) {
                     const details = document.createElement('details');
+                    // Mark actual tree root nodes as distinguishable
+                    if (isRoot) {
+                        details.className = 'tree-node-root';
+                    }
                     const summary = document.createElement('summary');
                     
                     const content = document.createElement('span');
@@ -1363,7 +1380,7 @@
                     childContainer.className = 'tree-node';
                     
                     node.children.forEach(child => {
-                        renderTreeNode(child, childContainer);
+                        renderTreeNode(child, childContainer, false);
                     });
                     
                     details.appendChild(childContainer);
