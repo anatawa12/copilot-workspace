@@ -552,6 +552,7 @@
                             <div class="view-mode-selector">
                                 <button class="view-mode-btn active" data-mode="simple">Simple</button>
                                 <button class="view-mode-btn" data-mode="tree">Tree</button>
+                                <button class="view-mode-btn" data-mode="raw">Raw</button>
                             </div>
                         </div>
                         <button id="file-headers-toggle" style="display: none;">Show File Headers</button>
@@ -870,6 +871,7 @@
                     <div>
                         <div id="tree-simple-view"></div>
                         <div id="tree-tree-view" style="display: none;"></div>
+                        <div id="tree-raw-view" style="display: none;"><pre id="content-text">${escapeHtml(file.content)}</pre></div>
                     </div>
                 `;
                 
@@ -1136,29 +1138,31 @@
         function switchTreeView(mode) {
             const simpleView = document.getElementById('tree-simple-view');
             const treeView = document.getElementById('tree-tree-view');
+            const rawView = document.getElementById('tree-raw-view');
             const buttons = document.querySelectorAll('.view-mode-btn');
             
-            if (mode === 'simple') {
+            // Hide all views first
+            if (simpleView) simpleView.style.display = 'none';
+            if (treeView) treeView.style.display = 'none';
+            if (rawView) rawView.style.display = 'none';
+            
+            // Show selected view
+            if (mode === 'simple' && simpleView) {
                 simpleView.style.display = 'block';
-                treeView.style.display = 'none';
-                buttons.forEach(btn => {
-                    if (btn.dataset.mode === 'simple') {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                });
-            } else {
-                simpleView.style.display = 'none';
+            } else if (mode === 'tree' && treeView) {
                 treeView.style.display = 'block';
-                buttons.forEach(btn => {
-                    if (btn.dataset.mode === 'tree') {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                });
+            } else if (mode === 'raw' && rawView) {
+                rawView.style.display = 'block';
             }
+            
+            // Update button states
+            buttons.forEach(btn => {
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
         }
 
         // Event listeners
