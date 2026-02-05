@@ -481,6 +481,19 @@
             background: #e0ebff;
         }
 
+        /* Intermediate node styling - hierarchy nodes under root nodes */
+        .tree-node-intermediate > summary {
+            font-weight: 500;
+            background: #f8f9ff;
+            padding: 2px 4px;
+            border-radius: 2px;
+            margin: 1px 0;
+        }
+
+        .tree-node-intermediate > summary:hover {
+            background: #eef0ff;
+        }
+
         .tree-view-container {
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 13px;
@@ -1299,7 +1312,7 @@
             // Build hierarchy from root node paths
             const rootHierarchy = buildRootHierarchy(nodes);
             
-            function renderHierarchyNode(hierNode, parentElement) {
+            function renderHierarchyNode(hierNode, parentElement, isUnderRoot = false) {
                 const hasChildren = (hierNode.pathChildren && hierNode.pathChildren.length > 0) || 
                                   (hierNode.treeChildren && hierNode.treeChildren.length > 0);
                 
@@ -1307,8 +1320,12 @@
                     // Use details/summary for collapsible hierarchy
                     const details = document.createElement('details');
                     // Mark hierarchy nodes with tree children as root nodes
-                    if (hierNode.treeChildren && hierNode.treeChildren.length > 0) {
+                    const hasTreeChildren = hierNode.treeChildren && hierNode.treeChildren.length > 0;
+                    if (hasTreeChildren) {
                         details.className = 'tree-node-root';
+                    } else if (isUnderRoot) {
+                        // Intermediate node under a root node
+                        details.className = 'tree-node-intermediate';
                     }
                     const summary = document.createElement('summary');
                     
@@ -1325,10 +1342,13 @@
                     const childContainer = document.createElement('div');
                     childContainer.className = 'tree-node';
                     
+                    // Determine if children should be marked as under root
+                    const childIsUnderRoot = hasTreeChildren || isUnderRoot;
+                    
                     // Render path hierarchy children first
                     if (hierNode.pathChildren && hierNode.pathChildren.length > 0) {
                         hierNode.pathChildren.forEach(child => {
-                            renderHierarchyNode(child, childContainer);
+                            renderHierarchyNode(child, childContainer, childIsUnderRoot);
                         });
                     }
                     
@@ -1455,6 +1475,44 @@
                     });
                 }
             }
+            
+            // Merge duplicate nodes: if only child of an intermediate node has same name, merge them
+            function mergeDuplicates(hierNodes) {
+                for (const hierNode of hierNodes) {
+                    // If this node has exactly one pathChild with tree children and no path children of its own
+                    if (hierNode.pathChildren.length === 1 && 
+                        (!hierNode.treeChildren || hierNode.treeChildren.length === 0)) {
+                        const child = hierNode.pathChildren[0];
+                        // If the child has the same name as this node and has tree children
+                        if (child.name === hierNode.name && child.treeChildren && child.treeChildren.length > 0) {
+                            // Merge child's tree children into this node
+                            hierNode.treeChildren = child.treeChildren;
+                            hierNode.type = child.type || hierNode.type;
+                            hierNode.pathChildren = child.pathChildren;
+                        }
+                    }
+                    // Recursively process children
+                    if (hierNode.pathChildren.length > 0) {
+                        mergeDuplicates(hierNode.pathChildren);
+                    }
+                }
+            }
+            
+            // Sort nodes: path hierarchy and root nodes alphabetically, but not tree children
+            function sortHierarchy(hierNodes) {
+                // Sort current level by name
+                hierNodes.sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Recursively sort path children (but not tree children)
+                for (const hierNode of hierNodes) {
+                    if (hierNode.pathChildren.length > 0) {
+                        sortHierarchy(hierNode.pathChildren);
+                    }
+                }
+            }
+            
+            mergeDuplicates(roots);
+            sortHierarchy(roots);
             
             return roots;
         }
