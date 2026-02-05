@@ -1005,8 +1005,13 @@
             let currentLevel = '';
             
             lines.forEach((line, index) => {
-                // Detect log level (ERROR, WARNING, INFO, DEBUG, etc.)
-                const levelMatch = line.match(/\[(.*?)\]\s+(ERROR|WARNING|WARN|INFO|DEBUG|TRACE)/i);
+                // Detect log level - matches patterns like:
+                // [timestamp] [LogLevel] message
+                // [timestamp] LogLevel: message  
+                // LogLevel: message
+                const levelMatch = line.match(/\[.*?\]\s*\[(ERROR|WARNING|WARN|INFO|LOG|DEBUG|TRACE)\]/i) ||
+                                  line.match(/\[.*?\]\s+(ERROR|WARNING|WARN|INFO|LOG|DEBUG|TRACE):/i) ||
+                                  line.match(/^(ERROR|WARNING|WARN|INFO|LOG|DEBUG|TRACE):/i);
                 
                 if (levelMatch) {
                     // Save previous group
@@ -1014,7 +1019,8 @@
                         renderLogGroup(container, currentLevel, currentGroup);
                     }
                     // Start new group
-                    currentLevel = levelMatch[2].toUpperCase();
+                    currentLevel = levelMatch[1].toUpperCase();
+                    if (currentLevel === 'LOG') currentLevel = 'INFO';  // Treat LOG as INFO
                     currentGroup = [line];
                 } else if (currentGroup.length > 0) {
                     // Add to current group
