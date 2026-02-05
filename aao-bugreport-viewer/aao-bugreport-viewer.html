@@ -277,6 +277,21 @@
             gap: 10px;
         }
 
+        #tree-view-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #tree-search-input {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 180px;
+            height: 30px;
+        }
+
         #file-headers-toggle {
             background: #667eea;
             color: white;
@@ -509,7 +524,7 @@
                     <span id="content-filename">Select a file to view</span>
                     <div id="header-controls">
                         <div id="tree-view-controls" style="display: none;">
-                            <input type="text" id="tree-search-input" placeholder="Find and expand..." style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; width: 200px;">
+                            <input type="text" id="tree-search-input" placeholder="Find and expand...">
                             <button id="tree-search-btn" class="expand-all-btn">Search</button>
                             <button id="tree-clear-btn" class="expand-all-btn" style="display: none;">Clear</button>
                             <div class="view-mode-selector">
