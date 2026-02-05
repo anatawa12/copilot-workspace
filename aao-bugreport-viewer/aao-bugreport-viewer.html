@@ -884,7 +884,14 @@
                     btn.parentNode.replaceChild(newBtn, btn);
                 });
                 
+                // Reset button states - make Simple active, show all buttons
                 document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                    btn.style.display = 'inline-block';
+                    if (btn.dataset.mode === 'simple') {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
                     btn.addEventListener('click', (e) => {
                         switchTreeView(e.currentTarget.dataset.mode);
                     });
@@ -942,11 +949,18 @@
                 btn.parentNode.replaceChild(newBtn, btn);
             });
             
-            // Remove Tree button for log files, keep only Simple and Raw
-            const treeBtn = document.querySelector('.view-mode-btn[data-mode="tree"]');
-            if (treeBtn) treeBtn.style.display = 'none';
-            
+            // Reset button states - make Simple active, hide Tree button, show Raw
             document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                if (btn.dataset.mode === 'tree') {
+                    btn.style.display = 'none';
+                } else {
+                    btn.style.display = 'inline-block';
+                    if (btn.dataset.mode === 'simple') {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                }
                 btn.addEventListener('click', (e) => {
                     switchLogView(e.currentTarget.dataset.mode);
                 });
