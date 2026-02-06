@@ -625,6 +625,7 @@
         // State
         let parsedData = null;
         let currentFileIndex = -1;
+        let lastViewMode = 'simple'; // Track last used view mode for persistence
 
         // DOM Elements
         const inputContainer = document.getElementById('input-container');
@@ -842,6 +843,8 @@
                 document.getElementById('tree-view-controls').style.display = 'none';
                 // Display regular content
                 contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
+                // Reset view mode to simple for regular files
+                lastViewMode = 'simple';
             }
             
             // Update browser history if requested
@@ -945,11 +948,18 @@
                             </div>
                         `;
                         
-                        // Reset button states - make Simple active, show all buttons
+                        // Determine which mode to use (try to preserve last mode if available for tree files)
+                        let initialMode = 'simple'; // default
+                        if (lastViewMode === 'raw' || lastViewMode === 'simple' || lastViewMode === 'tree') {
+                            // All these modes are available for tree files
+                            initialMode = lastViewMode;
+                        }
+                        
+                        // Reset button states - activate the initial mode, show all buttons
                         document.querySelectorAll('.view-mode-btn').forEach(btn => {
                             // Remove any inline styles that might hide buttons
                             btn.style.removeProperty('display');
-                            if (btn.dataset.mode === 'simple') {
+                            if (btn.dataset.mode === initialMode) {
                                 btn.classList.add('active');
                             } else {
                                 btn.classList.remove('active');
@@ -994,6 +1004,12 @@
                         // Render both views
                         renderSimpleTreeView(nodes);
                         renderTreeView(nodes);
+                        
+                        // Apply the initial mode (show correct view based on saved preference)
+                        if (initialMode !== 'simple') {
+                            // Need to switch to the saved mode
+                            switchTreeView(initialMode);
+                        }
                     } catch (error) {
                         // Fallback to simple text view on error
                         console.error('Error parsing tree file:', error);
@@ -1033,13 +1049,22 @@
                     btn.parentNode.replaceChild(newBtn, btn);
                 });
                 
-                // Reset button states - make Simple active, hide Tree button, show Raw
+                // Determine which mode to use (try to preserve last mode if available for log files)
+                // Log files only support 'simple' and 'raw', not 'tree'
+                let initialMode = 'simple'; // default
+                if (lastViewMode === 'raw' || lastViewMode === 'simple') {
+                    // These modes are available for log files
+                    initialMode = lastViewMode;
+                }
+                // If lastViewMode was 'tree', fall back to 'simple' since logs don't support tree view
+                
+                // Reset button states - activate initial mode, hide Tree button, show Raw
                 document.querySelectorAll('.view-mode-btn').forEach(btn => {
                     if (btn.dataset.mode === 'tree') {
                         btn.style.display = 'none';
                     } else {
                         btn.style.display = 'inline-block';
-                        if (btn.dataset.mode === 'simple') {
+                        if (btn.dataset.mode === initialMode) {
                             btn.classList.add('active');
                         } else {
                             btn.classList.remove('active');
@@ -1052,6 +1077,11 @@
                 
                 // Render collapsible log view
                 renderCollapsibleLogView(file.content);
+                
+                // Apply the initial mode if it's not simple (show correct view based on saved preference)
+                if (initialMode === 'raw') {
+                    switchLogView('raw');
+                }
             }, 10);
         }
 
@@ -1059,6 +1089,9 @@
             const simpleView = document.getElementById('tree-simple-view');
             const rawView = document.getElementById('tree-raw-view');
             const buttons = document.querySelectorAll('.view-mode-btn');
+            
+            // Save the current view mode for persistence
+            lastViewMode = mode;
             
             if (mode === 'simple' && simpleView) {
                 simpleView.style.display = 'block';
@@ -1631,6 +1664,9 @@
             const treeView = document.getElementById('tree-tree-view');
             const rawView = document.getElementById('tree-raw-view');
             const buttons = document.querySelectorAll('.view-mode-btn');
+            
+            // Save the current view mode for persistence
+            lastViewMode = mode;
             
             // For raw view, switch immediately (no heavy computation)
             if (mode === 'raw') {
