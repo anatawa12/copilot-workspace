@@ -432,6 +432,32 @@
             font-weight: bold;
         }
 
+        /* Loading spinner */
+        .loading-spinner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 14px;
+        }
+
+        .loading-spinner::before {
+            content: '';
+            width: 24px;
+            height: 24px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         .tree-node {
             margin-left: 0;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
@@ -898,69 +924,83 @@
         function displayTreeFile(file) {
             try {
                 const lines = file.content.split('\n');
-                const nodes = parseTreeStructure(lines);
                 
                 // Show tree view controls in header
                 document.getElementById('tree-view-controls').style.display = 'flex';
                 
-                // Create view containers
-                contentViewer.innerHTML = `
-                    <div>
-                        <div id="tree-simple-view"></div>
-                        <div id="tree-tree-view" style="display: none;"></div>
-                        <div id="tree-raw-view" style="display: none;"><pre id="content-text">${escapeHtml(file.content)}</pre></div>
-                    </div>
-                `;
+                // Show loading spinner first
+                contentViewer.innerHTML = '<div class="loading-spinner">Loading tree view...</div>';
                 
-                // Reset button states - make Simple active, show all buttons
-                document.querySelectorAll('.view-mode-btn').forEach(btn => {
-                    // Remove any inline styles that might hide buttons
-                    btn.style.removeProperty('display');
-                    if (btn.dataset.mode === 'simple') {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
+                // Use setTimeout to let the spinner render before heavy computation
+                setTimeout(() => {
+                    try {
+                        const nodes = parseTreeStructure(lines);
+                        
+                        // Create view containers
+                        contentViewer.innerHTML = `
+                            <div>
+                                <div id="tree-simple-view"></div>
+                                <div id="tree-tree-view" style="display: none;"></div>
+                                <div id="tree-raw-view" style="display: none;"><pre id="content-text">${escapeHtml(file.content)}</pre></div>
+                            </div>
+                        `;
+                        
+                        // Reset button states - make Simple active, show all buttons
+                        document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                            // Remove any inline styles that might hide buttons
+                            btn.style.removeProperty('display');
+                            if (btn.dataset.mode === 'simple') {
+                                btn.classList.add('active');
+                            } else {
+                                btn.classList.remove('active');
+                            }
+                        });
+                        
+                        // Add event listeners to header mode buttons (remove old ones first by cloning)
+                        const viewBtns = document.querySelectorAll('.view-mode-btn');
+                        viewBtns.forEach(btn => {
+                            const newBtn = btn.cloneNode(true);
+                            btn.parentNode.replaceChild(newBtn, btn);
+                        });
+                        
+                        document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                switchTreeView(e.currentTarget.dataset.mode);
+                            });
+                        });
+                        
+                        // Add search functionality
+                        const searchInput = document.getElementById('tree-search-input');
+                        const searchBtn = document.getElementById('tree-search-btn');
+                        const clearBtn = document.getElementById('tree-clear-btn');
+                        
+                        // Remove old listeners by cloning
+                        const newSearchBtn = searchBtn.cloneNode(true);
+                        searchBtn.parentNode.replaceChild(newSearchBtn, searchBtn);
+                        
+                        document.getElementById('tree-search-btn').addEventListener('click', () => findAndExpandNodes());
+                        
+                        searchInput.addEventListener('keypress', (e) => {
+                            if (e.key === 'Enter') {
+                                findAndExpandNodes();
+                            }
+                        });
+                        
+                        const newClearBtn = clearBtn.cloneNode(true);
+                        clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
+                        
+                        document.getElementById('tree-clear-btn').addEventListener('click', () => clearSearch());
+                        
+                        // Render both views
+                        renderSimpleTreeView(nodes);
+                        renderTreeView(nodes);
+                    } catch (error) {
+                        // Fallback to simple text view on error
+                        console.error('Error parsing tree file:', error);
+                        document.getElementById('tree-view-controls').style.display = 'none';
+                        contentViewer.innerHTML = `<pre id="content-text">${escapeHtml(file.content)}</pre>`;
                     }
-                });
-                
-                // Add event listeners to header mode buttons (remove old ones first by cloning)
-                const viewBtns = document.querySelectorAll('.view-mode-btn');
-                viewBtns.forEach(btn => {
-                    const newBtn = btn.cloneNode(true);
-                    btn.parentNode.replaceChild(newBtn, btn);
-                });
-                
-                document.querySelectorAll('.view-mode-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        switchTreeView(e.currentTarget.dataset.mode);
-                    });
-                });
-                
-                // Add search functionality
-                const searchInput = document.getElementById('tree-search-input');
-                const searchBtn = document.getElementById('tree-search-btn');
-                const clearBtn = document.getElementById('tree-clear-btn');
-                
-                // Remove old listeners by cloning
-                const newSearchBtn = searchBtn.cloneNode(true);
-                searchBtn.parentNode.replaceChild(newSearchBtn, searchBtn);
-                
-                document.getElementById('tree-search-btn').addEventListener('click', () => findAndExpandNodes());
-                
-                searchInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        findAndExpandNodes();
-                    }
-                });
-                
-                const newClearBtn = clearBtn.cloneNode(true);
-                clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
-                
-                document.getElementById('tree-clear-btn').addEventListener('click', () => clearSearch());
-                
-                // Render both views
-                renderSimpleTreeView(nodes);
-                renderTreeView(nodes);
+                }, 10);
             } catch (error) {
                 // Fallback to simple text view on error
                 console.error('Error parsing tree file:', error);
@@ -973,40 +1013,46 @@
             // Show tree view controls (reuse for log files)
             document.getElementById('tree-view-controls').style.display = 'flex';
             
-            // Create view containers - Simple and Raw modes for log files
-            contentViewer.innerHTML = `
-                <div>
-                    <div id="tree-simple-view"></div>
-                    <div id="tree-raw-view" style="display: none;"><pre id="content-text">${escapeHtml(file.content)}</pre></div>
-                </div>
-            `;
+            // Show loading spinner first
+            contentViewer.innerHTML = '<div class="loading-spinner">Loading log view...</div>';
             
-            // Add event listeners to header mode buttons (remove old ones first)
-            const viewBtns = document.querySelectorAll('.view-mode-btn');
-            viewBtns.forEach(btn => {
-                const newBtn = btn.cloneNode(true);
-                btn.parentNode.replaceChild(newBtn, btn);
-            });
-            
-            // Reset button states - make Simple active, hide Tree button, show Raw
-            document.querySelectorAll('.view-mode-btn').forEach(btn => {
-                if (btn.dataset.mode === 'tree') {
-                    btn.style.display = 'none';
-                } else {
-                    btn.style.display = 'inline-block';
-                    if (btn.dataset.mode === 'simple') {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                }
-                btn.addEventListener('click', (e) => {
-                    switchLogView(e.currentTarget.dataset.mode);
+            // Use setTimeout to let the spinner render before heavy computation
+            setTimeout(() => {
+                // Create view containers - Simple and Raw modes for log files
+                contentViewer.innerHTML = `
+                    <div>
+                        <div id="tree-simple-view"></div>
+                        <div id="tree-raw-view" style="display: none;"><pre id="content-text">${escapeHtml(file.content)}</pre></div>
+                    </div>
+                `;
+                
+                // Add event listeners to header mode buttons (remove old ones first)
+                const viewBtns = document.querySelectorAll('.view-mode-btn');
+                viewBtns.forEach(btn => {
+                    const newBtn = btn.cloneNode(true);
+                    btn.parentNode.replaceChild(newBtn, btn);
                 });
-            });
-            
-            // Render collapsible log view
-            renderCollapsibleLogView(file.content);
+                
+                // Reset button states - make Simple active, hide Tree button, show Raw
+                document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                    if (btn.dataset.mode === 'tree') {
+                        btn.style.display = 'none';
+                    } else {
+                        btn.style.display = 'inline-block';
+                        if (btn.dataset.mode === 'simple') {
+                            btn.classList.add('active');
+                        } else {
+                            btn.classList.remove('active');
+                        }
+                    }
+                    btn.addEventListener('click', (e) => {
+                        switchLogView(e.currentTarget.dataset.mode);
+                    });
+                });
+                
+                // Render collapsible log view
+                renderCollapsibleLogView(file.content);
+            }, 10);
         }
 
         function switchLogView(mode) {
@@ -1528,12 +1574,12 @@
                     
                     const intermediate = intermediates[i];
                     
-                    // Find all root nodes with same name
-                    const matchingRoots = roots.filter(r => r.name === intermediate.name);
+                    // Find root node with same name
+                    const matchingRoot = roots.find(r => r.name === intermediate.name);
                     
-                    // Only merge if there's exactly one matching root without a type
-                    if (matchingRoots.length === 1 && !matchingRoots[0].type) {
-                        const matchingRoot = matchingRoots[0];
+                    if (matchingRoot) {
+                        // Don't merge if root node has a type value (after colon)
+                        if (matchingRoot.type) continue;
                         
                         // Merge intermediate into root
                         // Add intermediate's path children to root's path children
@@ -1677,17 +1723,18 @@
                 inputContainer.classList.remove('hidden');
                 parsedData = null;
                 currentFileIndex = -1;
-            } else if (hash === '#global-headers') {
-                // Show global headers without updating history
-                if (parsedData) {
+            } else if (parsedData) {
+                // Only handle these if we have parsed data
+                if (hash === '#global-headers') {
+                    // Show global headers without updating history
                     showGlobalHeadersView(false);
                     currentFileIndex = -1;
-                }
-            } else if (hash.startsWith('#file-')) {
-                // Show specific file without updating history
-                const fileIndex = parseInt(hash.substring(6));
-                if (parsedData && fileIndex >= 0 && fileIndex < parsedData.files.length) {
-                    selectFile(fileIndex, false);
+                } else if (hash.startsWith('#file-')) {
+                    // Show specific file without updating history
+                    const fileIndex = parseInt(hash.substring(6));
+                    if (fileIndex >= 0 && fileIndex < parsedData.files.length) {
+                        selectFile(fileIndex, false);
+                    }
                 }
             }
         }
