@@ -1632,28 +1632,60 @@
             const rawView = document.getElementById('tree-raw-view');
             const buttons = document.querySelectorAll('.view-mode-btn');
             
-            // Hide all views first
+            // For raw view, switch immediately (no heavy computation)
+            if (mode === 'raw') {
+                if (simpleView) simpleView.style.display = 'none';
+                if (treeView) treeView.style.display = 'none';
+                if (rawView) rawView.style.display = 'block';
+                
+                buttons.forEach(btn => {
+                    if (btn.dataset.mode === mode) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                return;
+            }
+            
+            // For simple/tree views, show loading spinner first
+            const loadingMessage = mode === 'tree' ? 'Switching to tree view...' : 'Switching to simple view...';
+            
+            // Hide all views and show loading
             if (simpleView) simpleView.style.display = 'none';
             if (treeView) treeView.style.display = 'none';
             if (rawView) rawView.style.display = 'none';
             
-            // Show selected view
-            if (mode === 'simple' && simpleView) {
-                simpleView.style.display = 'block';
-            } else if (mode === 'tree' && treeView) {
-                treeView.style.display = 'block';
-            } else if (mode === 'raw' && rawView) {
-                rawView.style.display = 'block';
-            }
+            // Create temporary loading div
+            const contentViewer = document.getElementById('content-viewer');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading-spinner';
+            loadingDiv.textContent = loadingMessage;
+            loadingDiv.id = 'view-switch-loading';
+            contentViewer.appendChild(loadingDiv);
             
-            // Update button states
-            buttons.forEach(btn => {
-                if (btn.dataset.mode === mode) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
+            // Use setTimeout to let the spinner render before switching views
+            setTimeout(() => {
+                // Remove loading spinner
+                const spinner = document.getElementById('view-switch-loading');
+                if (spinner) spinner.remove();
+                
+                // Show selected view
+                if (mode === 'simple' && simpleView) {
+                    simpleView.style.display = 'block';
+                } else if (mode === 'tree' && treeView) {
+                    treeView.style.display = 'block';
                 }
-            });
+                
+                // Update button states
+                buttons.forEach(btn => {
+                    if (btn.dataset.mode === mode) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            }, 10);
         }
 
         // Event listeners
